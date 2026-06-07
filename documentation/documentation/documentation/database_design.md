@@ -1,5 +1,7 @@
 
 # Database Design — VOGUEABULARY
+ Summary
+The database system manages user data, clothing items, and outfit recommendations. It supports backend processing and AI-based suggestions.
 
 ## 1. Overview
 The database system stores all user data, clothing items, outfit recommendations, and history. It supports backend processing and AI-based recommendations.
