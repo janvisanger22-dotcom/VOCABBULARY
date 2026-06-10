@@ -1,0 +1,267 @@
+[
+  {
+    "id": "item_1_white_linen_shirt",
+    "name": "White Linen Shirt",
+    "category": "top",
+    "color": "white",
+    "occasions": [
+      "casual",
+      "work"
+    ],
+    "weather": [
+      "hot",
+      "warm"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_2_black_turtleneck",
+    "name": "Black Turtleneck",
+    "category": "top",
+    "color": "black",
+    "occasions": [
+      "casual",
+      "formal",
+      "work"
+    ],
+    "weather": [
+      "cool",
+      "cold"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_3_navy_polo",
+    "name": "Navy Polo",
+    "category": "top",
+    "color": "navy",
+    "occasions": [
+      "casual",
+      "work"
+    ],
+    "weather": [
+      "warm",
+      "cool"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_4_pink_blouse",
+    "name": "Pink Blouse",
+    "category": "top",
+    "color": "pink",
+    "occasions": [
+      "party",
+      "casual"
+    ],
+    "weather": [
+      "warm",
+      "hot"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_5_blue_jeans",
+    "name": "Blue Jeans",
+    "category": "bottom",
+    "color": "blue",
+    "occasions": [
+      "casual"
+    ],
+    "weather": [
+      "warm",
+      "cool",
+      "cold"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_6_black_trousers",
+    "name": "Black Trousers",
+    "category": "bottom",
+    "color": "black",
+    "occasions": [
+      "formal",
+      "work"
+    ],
+    "weather": [
+      "cool",
+      "cold",
+      "warm"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_7_beige_chinos",
+    "name": "Beige Chinos",
+    "category": "bottom",
+    "color": "beige",
+    "occasions": [
+      "casual",
+      "work"
+    ],
+    "weather": [
+      "warm",
+      "cool"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_8_red_floral_dress",
+    "name": "Red Floral Dress",
+    "category": "dress",
+    "color": "red",
+    "occasions": [
+      "party",
+      "casual"
+    ],
+    "weather": [
+      "hot",
+      "warm"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_9_navy_midi_dress",
+    "name": "Navy Midi Dress",
+    "category": "dress",
+    "color": "navy",
+    "occasions": [
+      "formal",
+      "work"
+    ],
+    "weather": [
+      "warm",
+      "cool"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_10_pink_party_dress",
+    "name": "Pink Party Dress",
+    "category": "dress",
+    "color": "pink",
+    "occasions": [
+      "party"
+    ],
+    "weather": [
+      "warm",
+      "cool",
+      "rainy"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_11_white_sneakers",
+    "name": "White Sneakers",
+    "category": "shoes",
+    "color": "white",
+    "occasions": [
+      "casual",
+      "sport"
+    ],
+    "weather": [
+      "hot",
+      "warm",
+      "cool"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_12_black_heels",
+    "name": "Black Heels",
+    "category": "shoes",
+    "color": "black",
+    "occasions": [
+      "formal",
+      "party",
+      "work"
+    ],
+    "weather": [
+      "warm",
+      "cool"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_13_brown_loafers",
+    "name": "Brown Loafers",
+    "category": "shoes",
+    "color": "brown",
+    "occasions": [
+      "casual",
+      "work"
+    ],
+    "weather": [
+      "warm",
+      "cool",
+      "cold"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_14_black_boots",
+    "name": "Black Boots",
+    "category": "shoes",
+    "color": "black",
+    "occasions": [
+      "casual",
+      "formal",
+      "party"
+    ],
+    "weather": [
+      "cold",
+      "cool",
+      "rainy"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_15_black_wool_coat",
+    "name": "Black Wool Coat",
+    "category": "outerwear",
+    "color": "black",
+    "occasions": [
+      "formal",
+      "casual",
+      "work"
+    ],
+    "weather": [
+      "cold",
+      "cool"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_16_beige_trench_coat",
+    "name": "Beige Trench Coat",
+    "category": "outerwear",
+    "color": "beige",
+    "occasions": [
+      "casual",
+      "work",
+      "party"
+    ],
+    "weather": [
+      "cool",
+      "rainy"
+    ],
+    "is_clean": true
+  },
+  {
+    "id": "item_17_navy_rain_jacket",
+    "name": "Navy Rain Jacket",
+    "category": "outerwear",
+    "color": "navy",
+    "occasions": [
+      "casual",
+      "sport",
+      "party"
+    ],
+    "weather": [
+      "rainy",
+      "cool"
+    ],
+    "is_clean": true
+  }
+]

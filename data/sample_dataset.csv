@@ -1,6 +1,18 @@
-
-Item,Type,Color,Category,Season
-Shirt,Top,White,Formal,Summer
-Jeans,Bottom,Blue,Casual,All
-Jacket,Outerwear,Black,Winter,Winter
-Dress,Full,Red,Party,Summer
+item_id,name,category,color,occasions,weather_suitability
+t1,White Linen Shirt,top,white,"casual,work","hot,warm"
+t2,Black Turtleneck,top,black,"casual,formal,work","cool,cold"
+t3,Navy Polo,top,navy,"casual,work","warm,cool"
+t4,Pink Blouse,top,pink,"party,casual","warm,hot"
+b1,Blue Jeans,bottom,blue,casual,"warm,cool,cold"
+b2,Black Trousers,bottom,black,"formal,work","cool,cold,warm"
+b3,Beige Chinos,bottom,beige,"casual,work","warm,cool"
+b4,Olive Cargo Pants,bottom,olive,"casual,sport","cool,warm"
+d1,Red Floral Dress,dress,red,"party,casual","hot,warm"
+d2,Navy Midi Dress,dress,navy,"formal,work","warm,cool"
+s1,White Sneakers,shoes,white,"casual,sport","hot,warm,cool"
+s2,Black Heels,shoes,black,"formal,party,work","warm,cool"
+s3,Brown Loafers,shoes,brown,"casual,work","warm,cool,cold"
+s4,Black Boots,shoes,black,"casual,formal","cold,cool,rainy"
+o1,Black Wool Coat,outerwear,black,"formal,casual,work","cold,cool"
+o2,Beige Trench Coat,outerwear,beige,"casual,work","cool,rainy"
+o3,Navy Rain Jacket,outerwear,navy,"casual,sport","rainy,cool"
