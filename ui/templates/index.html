@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>vougeabulary — AI Fashion Stylist</title>
+<style>
+:root{--bg:#0A0A0A;--sf:#141414;--cd:#1C1C1C;--br:#2A2A2A;--tx:#F0F0F0;--mt:#888;--ac:#C8B89A;--ac-rgb:200,184,154;--gd:linear-gradient(135deg,var(--ac),#F0B429);--r:16px;--fn:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--br);border-radius:3px}
+
+/* HEADER */
+.hdr{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--br);height:60px;display:flex;align-items:center;padding:0 24px;gap:24px}
+.logo{font-size:20px;font-weight:900;background:var(--gd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;white-space:nowrap}
+.nav{display:flex;gap:2px;flex:1}
+.nb{padding:6px 14px;background:transparent;border:none;color:var(--mt);font-size:12px;font-weight:600;cursor:pointer;border-radius:8px;transition:.2s;font-family:var(--fn);text-transform:uppercase;letter-spacing:.5px}
+.nb:hover{background:var(--cd);color:var(--tx)}.nb.on{background:var(--cd);color:var(--tx);box-shadow:inset 0 -2px 0 var(--ac)}
+.profile-badges{display:flex;gap:6px;align-items:center}
+.badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(var(--ac-rgb),.3);background:rgba(var(--ac-rgb),.1);color:var(--ac);cursor:default}
+
+/* MAIN */
+.main{margin-top:60px;padding:28px;max-width:1200px;margin-left:auto;margin-right:auto}
+.tab{display:none;animation:fi .3s ease}.tab.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.sec-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.sec-sub{font-size:13px;color:var(--mt);margin-bottom:20px}
+
+/* STYLE GRID */
+.style-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:26px}
+.sc{background:var(--cd);border:2px solid var(--br);border-radius:var(--r);padding:15px 13px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;inset:0;background:var(--ac);opacity:0;transition:.2s}
+.sc:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px)}.sc:hover::before{opacity:.06}
+.sc.on{border-color:var(--ac)}.sc.on::before{opacity:.1}
+.sc-emoji{font-size:24px;display:block;margin-bottom:7px;position:relative}
+.sc-name{font-size:13px;font-weight:700;position:relative;margin-bottom:2px}
+.sc-tag{font-size:10px;color:var(--mt);position:relative}
+
+/* CONTROLS */
+.ctrl-row{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:20px 22px;display:flex;align-items:center;gap:26px;margin-bottom:22px;flex-wrap:wrap}
+.cg{display:flex;flex-direction:column;gap:6px}
+.cl{font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.8px}
+.temp-row{display:flex;align-items:center;gap:10px}
+.tv{font-size:24px;font-weight:900;min-width:60px}
+.wb{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+input[type=range]{-webkit-appearance:none;width:170px;height:3px;background:var(--br);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--ac);cursor:pointer}
+.occ-row{display:flex;gap:5px;flex-wrap:wrap}
+.op{padding:5px 13px;border-radius:20px;border:1px solid var(--br);background:transparent;color:var(--mt);font-size:12px;cursor:pointer;transition:.2s;font-family:var(--fn)}
+.op:hover{border-color:rgba(255,255,255,.25);color:var(--tx)}.op.on{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.rain-tog{display:flex;align-items:center;gap:8px;cursor:pointer}
+.tog{width:40px;height:21px;background:var(--br);border-radius:11px;position:relative;transition:.2s}
+.tog.on{background:var(--ac)}.tog::after{content:'';position:absolute;width:15px;height:15px;background:white;border-radius:50%;top:3px;left:3px;transition:.2s}.tog.on::after{transform:translateX(19px)}
+.rain-lbl{font-size:12px;color:var(--mt)}
+.rec-btn{margin-left:auto;padding:11px 24px;background:var(--gd);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--fn);transition:.2s;white-space:nowrap}
+.rec-btn:hover{opacity:.88;transform:translateY(-1px)}
+
+/* OUTFIT CARDS */
+.outfits-wrap{display:flex;gap:13px;margin-top:4px}
+.oc{flex:1;background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:17px;transition:.2s}
+.oc:hover{border-color:rgba(255,255,255,.18)}
+.oc-rank{font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:9px}
+.sl{font-size:10px;color:var(--mt);display:flex;justify-content:space-between;margin-bottom:4px}
+.sb{height:3px;background:var(--br);border-radius:2px;overflow:hidden;margin-bottom:13px}
+.sf{height:100%;background:var(--ac);border-radius:2px;transition:width 1s ease}
+.oi{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--br)}
+.oi:last-child{border-bottom:none}
+.cdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.orole{font-size:10px;color:var(--mt);width:65px;flex-shrink:0}
+.oname{font-size:12px;font-weight:600}
+.save-fit-btn{width:100%;margin-top:12px;padding:6px;border:1px solid var(--br);background:transparent;border-radius:8px;color:var(--mt);font-size:11px;cursor:pointer;transition:.2s;font-family:var(--fn)}
+.save-fit-btn:hover{border-color:var(--ac);color:var(--ac)}.save-fit-btn.saved{border-color:#27AE60;color:#27AE60}
+.empty{text-align:center;padding:48px 20px;color:var(--mt)}
+.empty-ico{font-size:40px;margin-bottom:12px}
+.empty-t{font-size:15px;font-weight:700;margin-bottom:5px;color:var(--tx)}
+.empty-s{font-size:12px}
+/* SAVED OUTFITS */
+.saved-section{margin-top:32px}
+.saved-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px}
+.saved-card{background:var(--cd);border:1px solid var(--br);border-radius:13px;padding:14px;position:relative}
+.saved-card:hover .del-saved{opacity:1}
+.del-saved{position:absolute;top:8px;right:8px;width:20px;height:20px;background:rgba(220,38,38,.8);border:none;border-radius:50%;color:#fff;font-size:9px;cursor:pointer;opacity:0;transition:.2s;display:flex;align-items:center;justify-content:center}
+.saved-score{font-size:22px;font-weight:900;margin-bottom:4px}
+.saved-meta{font-size:10px;color:var(--mt);margin-bottom:8px}
+.saved-items{display:flex;flex-direction:column;gap:3px}
+.saved-item-row{font-size:11px;color:var(--mt);display:flex;align-items:center;gap:5px}
+.saved-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* OUTFIT BUILDER */
+.ob-wrap{margin-top:28px;background:var(--cd);border:1px solid var(--br);border-radius:var(--r);overflow:hidden}
+.ob-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:.2s;user-select:none}
+.ob-hdr:hover{background:rgba(255,255,255,.03)}
+.ob-hdr-left{display:flex;align-items:center;gap:10px}
+.ob-hdr-title{font-size:14px;font-weight:700}
+.ob-hdr-sub{font-size:11px;color:var(--mt)}
+.ob-chevron{font-size:14px;color:var(--mt);transition:transform .3s}
+.ob-chevron.open{transform:rotate(180deg)}
+.ob-body{padding:20px;border-top:1px solid var(--br);display:none}
+.ob-body.show{display:block;animation:fi .3s ease}
+.ob-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.ob-cat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mt);margin-bottom:8px}
+.ob-items{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto}
+.ob-item{padding:6px 9px;border-radius:8px;border:1px solid var(--br);background:var(--sf);font-size:11px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:6px}
+.ob-item:hover{border-color:rgba(255,255,255,.2)}.ob-item.selected{border-color:var(--ac);background:rgba(var(--ac-rgb),.12)}
+.ob-item-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.verdict-btn{padding:10px 22px;background:var(--gd);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--fn);transition:.2s}
+.verdict-btn:hover{opacity:.88}
+.verdict-area{margin-top:16px}
+.verdict-card{background:var(--sf);border:1px solid var(--br);border-radius:12px;padding:18px;margin-top:12px}
+.verdict-score{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.v-score-num{font-size:36px;font-weight:900;line-height:1}
+.v-score-label{font-size:11px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px}
+.verdict-summary{font-size:14px;line-height:1.5;margin-bottom:14px;color:var(--tx)}
+.verdict-ai{font-size:13px;line-height:1.6;color:var(--tx);padding:12px;background:rgba(var(--ac-rgb),.08);border-radius:8px;border-left:3px solid var(--ac);margin-bottom:14px}
+.verdict-sections{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vs-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.vs-col-title.green{color:#27AE60}.vs-col-title.amber{color:#E67E22}
+.vs-item{font-size:12px;color:var(--mt);padding:4px 0;display:flex;align-items:flex-start;gap:6px;line-height:1.4}
+.vs-item::before{content:'';flex-shrink:0;margin-top:5px;width:5px;height:5px;border-radius:50%}
+.vs-item.green::before{background:#27AE60}.vs-item.amber::before{background:#E67E22}
+
+/* WARDROBE */
+.wlayout{display:grid;grid-template-columns:290px 1fr;gap:20px}
+.add-form{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:20px;position:sticky;top:80px;height:fit-content}
+.ft{font-size:16px;font-weight:800;margin-bottom:16px}
+.fg{margin-bottom:13px}
+.fl{font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px}
+.fi,.fs{width:100%;background:var(--sf);border:1px solid var(--br);border-radius:8px;color:var(--tx);padding:8px 12px;font-size:13px;font-family:var(--fn);outline:none;transition:.2s}
+.fi:focus,.fs:focus{border-color:var(--ac)}.fs option{background:var(--sf)}
+.cb-grp{display:flex;flex-wrap:wrap;gap:5px}
+.cb{padding:4px 10px;border-radius:20px;border:1px solid var(--br);background:transparent;color:var(--mt);font-size:11px;cursor:pointer;transition:.2s;font-family:var(--fn)}
+.cb:hover{border-color:rgba(255,255,255,.25);color:var(--tx)}.cb.on{background:rgba(var(--ac-rgb),.18);border-color:var(--ac);color:var(--ac);font-weight:600}
+/* Image upload */
+.img-upload-area{border:2px dashed var(--br);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.img-upload-area:hover{border-color:var(--ac)}.img-upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.img-upload-label{font-size:11px;color:var(--mt)}.img-upload-label span{color:var(--ac);font-weight:600}
+.img-preview{width:100%;height:80px;object-fit:cover;border-radius:8px;display:none;margin-top:8px}
+.add-btn{width:100%;padding:10px;background:var(--gd);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--fn);margin-top:4px;transition:.2s}
+.add-btn:hover{opacity:.88}
+.w-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.wcnt{font-size:13px;color:var(--mt)}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}
+.wi{background:var(--cd);border:1px solid var(--br);border-radius:13px;padding:13px;position:relative;transition:.2s}
+.wi:hover{border-color:rgba(255,255,255,.18);transform:translateY(-2px)}.wi:hover .del-btn{opacity:1}
+.wi-img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:8px}
+.wi-swatch{width:34px;height:34px;border-radius:50%;margin-bottom:8px;border:2px solid rgba(255,255,255,.1)}
+.wi-name{font-size:12px;font-weight:700;margin-bottom:3px}
+.wi-cat{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.07);font-size:9px;color:var(--mt);text-transform:capitalize;margin-bottom:2px}
+.wi-occ{font-size:9px;color:var(--mt)}
+.del-btn{position:absolute;top:8px;right:8px;width:22px;height:22px;background:rgba(220,38,38,.85);border:none;border-radius:50%;color:#fff;font-size:10px;cursor:pointer;opacity:0;transition:.2s;display:flex;align-items:center;justify-content:center}
+.wi-actions{display:flex;gap:5px;margin-top:7px}
+.clean-btn{flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--br);background:transparent;font-size:10px;cursor:pointer;transition:.2s;font-family:var(--fn);text-align:center}
+.clean-btn.clean{border-color:#27AE60;color:#27AE60;background:rgba(39,174,96,.1)}
+.clean-btn.dirty{border-color:#E67E22;color:#E67E22;background:rgba(230,126,34,.08)}
+/* CAPSULE ANALYSER */
+.capsule-btn{padding:8px 18px;background:transparent;border:1px solid var(--br);border-radius:8px;color:var(--mt);font-size:12px;cursor:pointer;font-family:var(--fn);transition:.2s}
+.capsule-btn:hover{border-color:var(--ac);color:var(--ac)}
+.capsule-card{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:20px;margin-top:14px;animation:fi .3s ease}
+.caps-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.caps-stat{background:var(--sf);border-radius:10px;padding:12px;text-align:center}
+.caps-stat-num{font-size:26px;font-weight:900;line-height:1;margin-bottom:3px}
+.caps-stat-lbl{font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.6px}
+.caps-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.caps-bar-label{font-size:11px;color:var(--mt);width:80px;flex-shrink:0}
+.caps-bar{flex:1;height:6px;background:var(--br);border-radius:3px;overflow:hidden}
+.caps-bar-fill{height:100%;background:var(--ac);border-radius:3px;transition:width .8s ease}
+.caps-bar-val{font-size:11px;font-weight:600;width:30px;text-align:right;flex-shrink:0}
+.gap-list{margin-top:14px}
+.gap-item{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:rgba(230,126,34,.07);border-radius:7px;margin-bottom:5px;border-left:3px solid #E67E22}
+.gap-icon{font-size:13px;flex-shrink:0}
+.gap-text{font-size:12px;color:var(--mt);line-height:1.4}
+.caps-upgrade{margin-top:12px;padding:10px 13px;background:rgba(var(--ac-rgb),.08);border-radius:8px;border-left:3px solid var(--ac);font-size:12px;color:var(--mt)}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 145px)}
+.chat-msgs{flex:1;overflow-y:auto;padding:6px 0;display:flex;flex-direction:column;gap:9px}
+.cm{display:flex;gap:8px;max-width:76%}.cm.u{margin-left:auto;flex-direction:row-reverse}.cm.a{margin-right:auto}
+.av{width:28px;height:28px;border-radius:50%;background:var(--gd);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.mb{padding:10px 14px;border-radius:17px;font-size:13px;line-height:1.5}
+.cm.a .mb{background:var(--cd);border:1px solid var(--br);border-bottom-left-radius:4px}
+.cm.u .mb{background:var(--gd);color:#fff;border-bottom-right-radius:4px}
+.mb a{color:var(--ac)}.cm.u .mb a{color:#fff;text-decoration:underline}.mb strong{font-weight:700}
+.typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:var(--cd);border:1px solid var(--br);border-radius:17px;border-bottom-left-radius:4px;width:fit-content}
+.td{width:6px;height:6px;background:var(--mt);border-radius:50%;animation:ty 1.2s infinite}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes ty{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.chat-in-row{display:flex;gap:8px;padding:12px 0 0;border-top:1px solid var(--br)}
+.cin{flex:1;background:var(--cd);border:1px solid var(--br);border-radius:10px;color:var(--tx);padding:10px 13px;font-size:13px;font-family:var(--fn);outline:none;transition:.2s}
+.cin:focus{border-color:var(--ac)}.cin::placeholder{color:var(--mt)}
+.send-btn{width:42px;height:42px;background:var(--gd);border:none;border-radius:10px;color:#fff;font-size:16px;cursor:pointer;transition:.2s;flex-shrink:0}
+.send-btn:hover{opacity:.88;transform:scale(1.04)}
+.powered{font-size:10px;color:var(--mt);text-align:right;padding-right:2px;margin-top:3px}
+
+/* SHOP */
+.shop-hdr{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:24px;margin-bottom:20px;display:flex;gap:20px;align-items:center}
+.sh-emoji{font-size:48px}
+.sh-info h2{font-size:20px;font-weight:900;margin-bottom:3px}
+.sh-tag{font-size:12px;color:var(--ac);font-weight:600;margin-bottom:6px}
+.sh-desc{font-size:13px;color:var(--mt);max-width:460px;line-height:1.5}
+.pal-row{display:flex;gap:7px;align-items:center;margin-top:10px}
+.pal-dot{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.1)}
+.pal-lbl{font-size:11px;color:var(--mt);margin-left:4px}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.shc{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:18px}
+.shc-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mt);margin-bottom:12px}
+.brand-list{display:flex;flex-direction:column;gap:6px}
+.brand-it{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--sf);border-radius:8px;font-size:13px;font-weight:600}
+.brand-dot{width:6px;height:6px;border-radius:50%;background:var(--ac);flex-shrink:0}
+.slinks{display:flex;flex-direction:column;gap:8px}
+.slink-item{background:var(--sf);border-radius:8px;padding:11px}
+.slink-lbl{font-size:12px;font-weight:700;margin-bottom:6px;text-transform:capitalize}
+.slink-btns{display:flex;gap:5px;flex-wrap:wrap}
+.slb{padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mt);font-size:11px;cursor:pointer;text-decoration:none;font-family:var(--fn);transition:.2s;display:inline-block}
+.slb:hover{border-color:var(--ac);color:var(--ac)}
+
+/* PROFILE TAB */
+.profile-layout{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.profile-section{margin-bottom:32px}
+.season-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.season-card{background:var(--cd);border:2px solid var(--br);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.season-card::before{content:'';position:absolute;inset:0;opacity:0;transition:.2s}
+.season-card:hover{transform:translateY(-2px)}.season-card:hover::before{opacity:.06}
+.season-card.on{border-color:var(--season-ac,var(--ac))}.season-card.on::before{background:var(--season-ac,var(--ac));opacity:.1}
+.season-emoji{font-size:22px;margin-bottom:7px;display:block}
+.season-name{font-size:14px;font-weight:800;margin-bottom:2px}
+.season-tagline{font-size:10px;color:var(--mt);margin-bottom:8px}
+.season-swatches{display:flex;gap:4px}
+.ssw{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,.1)}
+.season-detail{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:20px;animation:fi .3s ease}
+.sd-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.sd-emoji{font-size:36px}
+.sd-name{font-size:18px;font-weight:800}
+.sd-tag{font-size:12px;color:var(--ac);font-weight:600}
+.sd-desc{font-size:13px;color:var(--mt);line-height:1.5;margin-bottom:14px}
+.sd-palette{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.sd-swatch{display:flex;flex-direction:column;align-items:center;gap:4px}
+.sd-sw-dot{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.1)}
+.sd-sw-name{font-size:9px;color:var(--mt);text-align:center;max-width:36px;word-break:break-word;line-height:1.2}
+.sd-section-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mt);margin-bottom:6px;margin-top:12px}
+.sd-list{display:flex;flex-wrap:wrap;gap:5px}
+.sd-tag-item{padding:3px 9px;border-radius:20px;font-size:11px}
+.sd-tag-item.good{background:rgba(39,174,96,.15);color:#27AE60;border:1px solid rgba(39,174,96,.3)}
+.sd-tag-item.avoid{background:rgba(231,76,60,.1);color:#E74C3C;border:1px solid rgba(231,76,60,.2)}
+.sd-tip{font-size:12px;color:var(--mt);line-height:1.5;padding:10px 12px;background:rgba(var(--ac-rgb),.08);border-radius:8px;border-left:3px solid var(--ac);margin-top:10px}
+.sd-celebrities{font-size:11px;color:var(--mt);margin-top:10px}
+
+/* BODY TYPE */
+.bt-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.bt-card{background:var(--cd);border:2px solid var(--br);border-radius:12px;padding:13px 10px;cursor:pointer;transition:.2s;text-align:center}
+.bt-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.2)}.bt-card.on{border-color:var(--ac)}
+.bt-emoji{font-size:24px;margin-bottom:6px;display:block}
+.bt-name{font-size:11px;font-weight:700}
+.bt-sub{font-size:9px;color:var(--mt);margin-top:2px}
+.bt-detail{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:20px;animation:fi .3s ease}
+.bt-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.bt-hdr-emoji{font-size:32px}
+.bt-hdr-name{font-size:17px;font-weight:800}
+.bt-hdr-tag{font-size:12px;color:var(--ac);font-weight:600;margin-top:2px}
+.bt-desc{font-size:13px;color:var(--mt);line-height:1.5;margin-bottom:14px}
+.bt-goal{padding:10px 13px;background:rgba(var(--ac-rgb),.1);border-radius:8px;border-left:3px solid var(--ac);font-size:13px;font-weight:600;margin-bottom:14px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tc-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.tc-title.green{color:#27AE60}.tc-title.red{color:#E74C3C}
+.bt-list{display:flex;flex-direction:column;gap:5px}
+.bt-list-item{font-size:12px;color:var(--mt);display:flex;align-items:flex-start;gap:6px;line-height:1.4}
+.bt-list-item::before{content:'';flex-shrink:0;width:5px;height:5px;border-radius:50%;margin-top:5px}
+.bt-list-item.green::before{background:#27AE60}.bt-list-item.red::before{background:#E74C3C}
+.outfit-ideas{margin-top:14px}
+.outfit-idea-item{padding:7px 10px;background:var(--sf);border-radius:7px;font-size:12px;color:var(--mt);margin-bottom:5px}
+
+/* QUIZ */
+.quiz-card{background:var(--cd);border:1px solid var(--br);border-radius:var(--r);padding:20px;margin-bottom:18px}
+.quiz-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quiz-opt{padding:10px 13px;background:var(--sf);border:1px solid var(--br);border-radius:9px;font-size:12px;cursor:pointer;transition:.2s;text-align:left}
+.quiz-opt:hover{border-color:var(--ac)}.quiz-opt.on{border-color:var(--ac);background:rgba(var(--ac-rgb),.12);color:var(--ac)}
+
+@media(max-width:1000px){.style-grid{grid-template-columns:repeat(2,1fr)}.wlayout{grid-template-columns:1fr}.shop-grid{grid-template-columns:1fr}.profile-layout{grid-template-columns:1fr}.bt-grid{grid-template-columns:repeat(3,1fr)}.ob-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.main{padding:18px 13px}.hdr{padding:0 13px}.outfits-wrap{flex-direction:column}.bt-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="logo">vougeabulary</div>
+  <nav class="nav">
+    <button class="nb on"  onclick="tab('home',this)">Style</button>
+    <button class="nb"     onclick="tab('wardrobe',this)">Wardrobe</button>
+    <button class="nb"     onclick="tab('chat',this)">AI Stylist</button>
+    <button class="nb"     onclick="tab('shop',this)">Shop</button>
+    <button class="nb"     onclick="tab('profile',this)">My Profile</button>
+  </nav>
+  <div class="profile-badges">
+    <div class="badge" id="styleBadge">◻ Minimalist</div>
+    <div class="badge" id="seasonBadge" style="display:none"></div>
+    <div class="badge" id="bodyBadge" style="display:none"></div>
+  </div>
+</header>
+
+<main class="main">
+
+<!-- ── STYLE + RECOMMENDATIONS ── -->
+<div id="t-home" class="tab on">
+  <div class="sec-title">Choose Your Aesthetic</div>
+  <div class="sec-sub">Your style shapes every recommendation, chat response, and shopping suggestion</div>
+  <div class="style-grid" id="styleGrid">
+    {% for key, s in styles.items() %}
+    <div class="sc{% if key=='minimalist' %} on{% endif %}" id="sc-{{key}}"
+         onclick="selectStyle('{{key}}','{{s.accent}}','{{s.emoji}}','{{s.name}}')" title="{{s.description}}">
+      <span class="sc-emoji">{{s.emoji}}</span>
+      <div class="sc-name">{{s.name}}</div>
+      <div class="sc-tag">{{s.tagline}}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="ctrl-row">
+    <div class="cg">
+      <div class="cl">Temperature</div>
+      <div class="temp-row">
+        <span class="tv" id="tv">22°C</span>
+        <span class="wb" id="wb" style="background:#E67E22;color:white">WARM</span>
+      </div>
+      <input type="range" id="tslider" min="-10" max="45" value="22" oninput="updTemp(this.value)">
+    </div>
+    <div class="cg">
+      <div class="cl">Occasion</div>
+      <div class="occ-row">
+        <button class="op on" onclick="selOcc(this,'casual')">Casual</button>
+        <button class="op"    onclick="selOcc(this,'work')">Work</button>
+        <button class="op"    onclick="selOcc(this,'formal')">Formal</button>
+        <button class="op"    onclick="selOcc(this,'party')">Party</button>
+        <button class="op"    onclick="selOcc(this,'sport')">Sport</button>
+      </div>
+    </div>
+    <div class="cg">
+      <div class="cl">Weather</div>
+      <div class="rain-tog" onclick="togRain()">
+        <div class="tog" id="rainTog"></div>
+        <span class="rain-lbl" id="rainLbl">Not raining</span>
+      </div>
+    </div>
+    <button class="rec-btn" onclick="getRecs()">Get Outfits</button>
+  </div>
+
+  <div id="outfitArea"></div>
+
+  <!-- Saved Outfits -->
+  <div class="saved-section" id="savedSection" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="sec-title">Saved Outfits</div>
+      <div style="font-size:11px;color:var(--mt)" id="savedCount"></div>
+    </div>
+    <div class="saved-grid" id="savedGrid"></div>
+  </div>
+
+  <!-- Outfit Builder -->
+  <div class="ob-wrap" id="obWrap">
+    <div class="ob-hdr" onclick="toggleOB()">
+      <div class="ob-hdr-left">
+        <span style="font-size:18px">✂</span>
+        <div>
+          <div class="ob-hdr-title">Build Your Own Outfit — Get AI Verdict</div>
+          <div class="ob-hdr-sub">Pick items from your wardrobe and let the AI rate your combination</div>
+        </div>
+      </div>
+      <span class="ob-chevron" id="obChevron">▼</span>
+    </div>
+    <div class="ob-body" id="obBody">
+      <div class="ob-grid" id="obGrid">
+        <div>
+          <div class="ob-cat-label">Top / Dress</div>
+          <div class="ob-items" id="ob-top"></div>
+        </div>
+        <div>
+          <div class="ob-cat-label">Bottom</div>
+          <div class="ob-items" id="ob-bottom"></div>
+        </div>
+        <div>
+          <div class="ob-cat-label">Outerwear</div>
+          <div class="ob-items" id="ob-outerwear"></div>
+        </div>
+        <div>
+          <div class="ob-cat-label">Shoes</div>
+          <div class="ob-items" id="ob-shoes"></div>
+        </div>
+        <div>
+          <div class="ob-cat-label">Accessory</div>
+          <div class="ob-items" id="ob-accessory"></div>
+        </div>
+      </div>
+      <button class="verdict-btn" onclick="getVerdict()">Get AI Verdict</button>
+      <div class="verdict-area" id="verdictArea"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── WARDROBE ── -->
+<div id="t-wardrobe" class="tab">
+  <div class="wlayout">
+    <div class="add-form">
+      <div class="ft">Add Clothing Item</div>
+      <div class="fg"><label class="fl">Name</label><input class="fi" id="iName" placeholder="e.g. White Linen Shirt"></div>
+      <div class="fg">
+        <label class="fl">Category</label>
+        <select class="fs" id="iCat">
+          <option value="top">Top</option><option value="bottom">Bottom</option>
+          <option value="dress">Dress</option><option value="outerwear">Outerwear</option>
+          <option value="shoes">Shoes</option><option value="accessory">Accessory</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Color</label><input class="fi" id="iColor" placeholder="e.g. white, navy, dusty rose..."></div>
+      <div class="fg">
+        <label class="fl">Occasions</label>
+        <div class="cb-grp" id="occCbs">
+          <button class="cb" onclick="togCb(this)" data-v="casual">Casual</button>
+          <button class="cb" onclick="togCb(this)" data-v="work">Work</button>
+          <button class="cb" onclick="togCb(this)" data-v="formal">Formal</button>
+          <button class="cb" onclick="togCb(this)" data-v="party">Party</button>
+          <button class="cb" onclick="togCb(this)" data-v="sport">Sport</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Weather</label>
+        <div class="cb-grp" id="wthrCbs">
+          <button class="cb" onclick="togCb(this)" data-v="hot">Hot</button>
+          <button class="cb" onclick="togCb(this)" data-v="warm">Warm</button>
+          <button class="cb" onclick="togCb(this)" data-v="cool">Cool</button>
+          <button class="cb" onclick="togCb(this)" data-v="cold">Cold</button>
+          <button class="cb" onclick="togCb(this)" data-v="rainy">Rainy</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Photo (optional)</label>
+        <div class="img-upload-area" id="imgUploadArea" onclick="document.getElementById('imgInput').click()">
+          <div class="img-upload-label">Click to upload or drag photo<br><span>PNG, JPG up to 5MB</span></div>
+          <input type="file" id="imgInput" accept="image/*" onchange="previewImg(this)" style="display:none">
+          <img id="imgPreview" class="img-preview" alt="">
+        </div>
+      </div>
+      <button class="add-btn" onclick="addItem()">+ Add to Wardrobe</button>
+    </div>
+    <div>
+      <div class="w-hdr">
+        <div class="sec-title">My Wardrobe</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="wcnt" id="wCnt"></div>
+          <button class="capsule-btn" onclick="runCapsuleAnalysis()">Analyse Capsule</button>
+        </div>
+      </div>
+      <div id="capsuleArea"></div>
+      <div class="wgrid" id="wGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI STYLIST CHAT ── -->
+<div id="t-chat" class="tab">
+  <div class="chat-wrap">
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="powered" id="poweredBy"></div>
+    <div class="chat-in-row">
+      <input class="cin" id="cin" placeholder="Ask for outfits, style tips, color advice, shopping..."
+             onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="send-btn" onclick="sendMsg()">↑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SHOP ── -->
+<div id="t-shop" class="tab"><div id="shopArea"></div></div>
+
+<!-- ── MY PROFILE ── -->
+<div id="t-profile" class="tab">
+
+  <!-- Color Season -->
+  <div class="profile-section">
+    <div class="sec-title">Your Color Season</div>
+    <div class="sec-sub">Color season theory helps you find shades that naturally complement your skin, hair, and eye color</div>
+
+    <div class="quiz-card">
+      <div class="quiz-title">What are your undertones?</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" onclick="quizHint(this,'spring,autumn','warm')">Warm — golden, peachy, or olive skin</div>
+        <div class="quiz-opt" onclick="quizHint(this,'summer,winter','cool')">Cool — pink, rosy, or bluish undertones</div>
+        <div class="quiz-opt" onclick="quizHint(this,'spring,summer','light')">Light — fair to medium skin overall</div>
+        <div class="quiz-opt" onclick="quizHint(this,'autumn,winter','deep')">Deep — medium to dark rich skin</div>
+      </div>
+    </div>
+
+    <div class="season-grid">
+      {% for key, s in color_seasons.items() %}
+      <div class="season-card" id="sea-{{key}}" onclick="selectSeason('{{key}}')"
+           style="--season-ac:{{s.accent}}">
+        <span class="season-emoji">{{s.emoji}}</span>
+        <div class="season-name">{{s.name}}</div>
+        <div class="season-tagline">{{s.tagline}}</div>
+        <div class="season-swatches">
+          {% for hex in s.palette_hex[:5] %}
+          <div class="ssw" style="background:{{hex}}"></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="seasonDetail"></div>
+  </div>
+
+  <!-- Body Type -->
+  <div class="profile-section">
+    <div class="sec-title">Your Body Type</div>
+    <div class="sec-sub">Every body type has a dressing strategy that highlights your best features and creates beautiful proportions</div>
+
+    <div class="bt-grid">
+      {% for key, b in body_types.items() %}
+      <div class="bt-card" id="bt-{{key}}" onclick="selectBody('{{key}}')">
+        <span class="bt-emoji">{{b.emoji}}</span>
+        <div class="bt-name">{{b.name}}</div>
+        <div class="bt-sub">{{b.tagline}}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="bodyDetail"></div>
+  </div>
+
+</div>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let curStyle  = 'minimalist';
+let curOcc    = 'casual';
+let isRaining = false;
+let chatHist  = [];
+let curSeason = '';
+let curBody   = '';
+let imgData   = '';
+let obOpen    = false;
+let obSelected = {};  // { category: { id, name, color } }
+
+const STYLES  = {{ styles | tojson }};
+const CHEX    = {{ color_hex | tojson }};
+const SEASONS = {{ color_seasons | tojson }};
+const BODIES  = {{ body_types | tojson }};
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function tab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('on'));
+  document.getElementById('t-'+id).classList.add('on');
+  btn.classList.add('on');
+  if (id==='wardrobe') loadWardrobe();
+  if (id==='shop')     loadShop(curStyle);
+  if (id==='chat')     initChat();
+}
+
+// ── Style ─────────────────────────────────────────────────────────────────────
+function selectStyle(key, accent, emoji, name) {
+  curStyle = key;
+  const r = parseInt(accent.slice(1,3),16), g = parseInt(accent.slice(3,5),16), b = parseInt(accent.slice(5,7),16);
+  document.documentElement.style.setProperty('--ac', accent);
+  document.documentElement.style.setProperty('--ac-rgb', `${r},${g},${b}`);
+  document.documentElement.style.setProperty('--gd', `linear-gradient(135deg,${accent},#F0B429)`);
+  document.querySelectorAll('.sc').forEach(c => c.classList.remove('on'));
+  document.getElementById('sc-'+key).classList.add('on');
+  document.getElementById('styleBadge').textContent = emoji + ' ' + name;
+  chatHist = [];
+  initChat();
+}
+
+// ── Temperature ───────────────────────────────────────────────────────────────
+function updTemp(v) {
+  v = parseInt(v);
+  document.getElementById('tv').textContent = v + '°C';
+  const wb = document.getElementById('wb');
+  if (isRaining)    { wb.textContent='RAINY'; wb.style.cssText='background:#5DADE2;color:white'; }
+  else if (v>=30)   { wb.textContent='HOT';   wb.style.cssText='background:#E74C3C;color:white'; }
+  else if (v>=20)   { wb.textContent='WARM';  wb.style.cssText='background:#E67E22;color:white'; }
+  else if (v>=10)   { wb.textContent='COOL';  wb.style.cssText='background:#2980B9;color:white'; }
+  else              { wb.textContent='COLD';  wb.style.cssText='background:#1A5276;color:white'; }
+}
+function selOcc(btn, val) {
+  document.querySelectorAll('.op').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on'); curOcc = val;
+}
+function togRain() {
+  isRaining = !isRaining;
+  document.getElementById('rainTog').classList.toggle('on', isRaining);
+  document.getElementById('rainLbl').textContent = isRaining ? 'Raining' : 'Not raining';
+  updTemp(parseInt(document.getElementById('tslider').value));
+}
+
+// ── Recommendations ───────────────────────────────────────────────────────────
+async function getRecs() {
+  const area = document.getElementById('outfitArea');
+  area.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-t">Finding your outfits...</div></div>';
+  const res  = await fetch('/api/recommend', {method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({temp: parseInt(document.getElementById('tslider').value), occasion: curOcc, rain: isRaining})});
+  const data = await res.json();
+  if (data.empty || !data.outfits?.length) {
+    area.innerHTML = `<div class="empty"><div class="empty-ico">👗</div><div class="empty-t">No outfits found</div><div class="empty-s">${data.empty?'Add clothes to your wardrobe first!':'Try a different occasion or temperature.'}</div></div>`;
+    return;
+  }
+  const cards = data.outfits.map((o,i) => `<div class="oc" id="oc-${i}">
+    <div class="oc-rank">Outfit #${i+1}</div>
+    <div class="sl"><span>Match score</span><span>${o.score}/100</span></div>
+    <div class="sb"><div class="sf" style="width:${o.score}%"></div></div>
+    ${o.items.map(it=>`<div class="oi"><div class="cdot" style="background:${it.hex}"></div><span class="orole">${it.role}</span><span class="oname">${it.name}</span></div>`).join('')}
+    <button class="save-fit-btn" onclick="saveOutfit(${i},this)" data-outfit='${JSON.stringify(o)}'>+ Save Outfit</button>
+  </div>`).join('');
+  area.innerHTML = `<div style="font-size:12px;color:var(--mt);margin-bottom:10px;font-weight:600">${data.outfits.length} Outfit${data.outfits.length>1?'s':''} Found</div><div class="outfits-wrap">${cards}</div>`;
+  loadSavedOutfits();
+}
+
+// ── Save / load saved outfits ─────────────────────────────────────────────────
+async function saveOutfit(idx, btn) {
+  const outfit = JSON.parse(btn.dataset.outfit);
+  await fetch('/api/saved-outfits', {method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({...outfit, occasion: curOcc, style: curStyle})});
+  btn.textContent = '✓ Saved';
+  btn.classList.add('saved');
+  btn.disabled = true;
+  loadSavedOutfits();
+}
+
+async function loadSavedOutfits() {
+  const res   = await fetch('/api/saved-outfits');
+  const fits  = await res.json();
+  const sec   = document.getElementById('savedSection');
+  const grid  = document.getElementById('savedGrid');
+  const cnt   = document.getElementById('savedCount');
+  if (!fits.length) { sec.style.display='none'; return; }
+  sec.style.display = 'block';
+  cnt.textContent = fits.length + ' saved';
+  grid.innerHTML = fits.map(f => `<div class="saved-card">
+    <button class="del-saved" onclick="deleteSaved('${f.id}')">✕</button>
+    <div class="saved-score" style="color:${f.score>=80?'#27AE60':f.score>=55?'#E67E22':'#E74C3C'}">${f.score}<span style="font-size:13px;font-weight:400;color:var(--mt)">/100</span></div>
+    <div class="saved-meta">${f.saved_at} · ${f.occasion||''}${f.style?' · '+f.style:''}</div>
+    <div class="saved-items">
+      ${(f.items||[]).map(it=>`<div class="saved-item-row"><div class="saved-dot" style="background:${it.hex||'#888'}"></div>${it.name}</div>`).join('')}
+    </div>
+  </div>`).join('');
+}
+
+async function deleteSaved(id) {
+  await fetch('/api/saved-outfits/'+id, {method:'DELETE'});
+  loadSavedOutfits();
+}
+
+// ── Outfit Builder ────────────────────────────────────────────────────────────
+function toggleOB() {
+  obOpen = !obOpen;
+  document.getElementById('obBody').classList.toggle('show', obOpen);
+  document.getElementById('obChevron').classList.toggle('open', obOpen);
+  if (obOpen) loadOBItems();
+}
+
+async function loadOBItems() {
+  const res   = await fetch('/api/wardrobe');
+  const items = await res.json();
+  const cats  = ['top','bottom','outerwear','shoes','accessory'];
+  cats.forEach(cat => {
+    const el    = document.getElementById('ob-'+cat);
+    const group = items.filter(i => i.category === cat || (cat==='top' && i.category==='dress'));
+    if (!group.length) { el.innerHTML = '<div style="font-size:11px;color:var(--mt);padding:6px">None added yet</div>'; return; }
+    el.innerHTML = group.map(i => `
+      <div class="ob-item" id="obi-${i.id}" onclick="togOBItem('${i.id}','${i.category}','${i.name}','${i.color}')">
+        <div class="ob-item-dot" style="background:${CHEX[i.color]||'#888'}"></div>
+        <span>${i.name}</span>
+      </div>`).join('');
+  });
+}
+
+function togOBItem(id, cat, name, color) {
+  const normCat = (cat==='dress') ? 'top' : cat;
+  // Deselect previous in same category
+  if (obSelected[normCat]) {
+    const prev = document.getElementById('obi-'+obSelected[normCat].id);
+    if (prev) prev.classList.remove('selected');
+  }
+  // If clicking already selected, deselect
+  if (obSelected[normCat]?.id === id) { delete obSelected[normCat]; return; }
+  obSelected[normCat] = { id, name, color, category: normCat };
+  document.getElementById('obi-'+id)?.classList.add('selected');
+}
+
+async function getVerdict() {
+  const items = Object.values(obSelected);
+  if (!items.length) { alert('Select at least one item to build an outfit!'); return; }
+  const area = document.getElementById('verdictArea');
+  area.innerHTML = '<div style="color:var(--mt);font-size:13px;padding:12px 0">Analysing your outfit...</div>';
+  const res  = await fetch('/api/outfit-verdict', {method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({items, style: curStyle, color_season: curSeason, body_type: curBody})});
+  const d    = await res.json();
+  const scoreColor = d.score>=80?'#27AE60':d.score>=55?'#E67E22':'#E74C3C';
+  const aiBlock = d.ai_verdict ? `<div class="verdict-ai"><strong>AI Verdict:</strong> ${d.ai_verdict}</div>` : '';
+  const strengths = (d.strengths||[]).map(s=>`<div class="vs-item green">${s}</div>`).join('');
+  const suggs = (d.suggestions||[]).map(s=>`<div class="vs-item amber">${s}</div>`).join('');
+  area.innerHTML = `<div class="verdict-card">
+    <div class="verdict-score">
+      <div><div class="v-score-num" style="color:${scoreColor}">${d.score}</div><div class="v-score-label">/ 100</div></div>
+      <div class="sb" style="flex:1;height:6px"><div class="sf" style="width:${d.score}%;background:${scoreColor}"></div></div>
+    </div>
+    <div class="verdict-summary">${d.summary}</div>
+    ${aiBlock}
+    <div class="verdict-sections">
+      <div><div class="vs-col-title green">What works</div>${strengths||'<div class="vs-item green">Outfit submitted for review</div>'}</div>
+      <div><div class="vs-col-title amber">Suggestions</div>${suggs||'<div class="vs-item amber">Looks good — no major issues!</div>'}</div>
+    </div>
+  </div>`;
+}
+
+// ── Wardrobe ──────────────────────────────────────────────────────────────────
+function togCb(btn) { btn.classList.toggle('on'); }
+
+function previewImg(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    imgData = e.target.result;
+    const prev = document.getElementById('imgPreview');
+    prev.src = imgData; prev.style.display = 'block';
+    document.querySelector('.img-upload-label').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function addItem() {
+  const name    = document.getElementById('iName').value.trim();
+  const cat     = document.getElementById('iCat').value;
+  const color   = document.getElementById('iColor').value.trim().toLowerCase();
+  const occs    = [...document.querySelectorAll('#occCbs .cb.on')].map(b=>b.dataset.v);
+  const weather = [...document.querySelectorAll('#wthrCbs .cb.on')].map(b=>b.dataset.v);
+  if (!name||!color||!occs.length||!weather.length) { alert('Fill in all fields and select at least one occasion and weather type.'); return; }
+
+  const addRes = await fetch('/api/wardrobe', {method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, category:cat, color, occasions:occs, weather})});
+  const added  = await addRes.json();
+
+  // Upload image if one was selected
+  if (imgData && added.item?.id) {
+    await fetch('/api/upload-image', {method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({image: imgData, item_id: added.item.id})});
+  }
+
+  // Reset form
+  document.getElementById('iName').value = '';
+  document.getElementById('iColor').value = '';
+  document.querySelectorAll('#occCbs .cb, #wthrCbs .cb').forEach(b=>b.classList.remove('on'));
+  imgData = '';
+  document.getElementById('imgPreview').style.display = 'none';
+  document.getElementById('imgPreview').src = '';
+  document.querySelector('.img-upload-label').style.display = '';
+  document.getElementById('imgInput').value = '';
+  loadWardrobe();
+}
+
+async function loadWardrobe() {
+  const res  = await fetch('/api/wardrobe');
+  const data = await res.json();
+  const grid = document.getElementById('wGrid');
+  if (!data.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">👒</div><div class="empty-t">Wardrobe is empty</div><div class="empty-s">Add your first item!</div></div>';
+    return;
+  }
+  const dirty = data.filter(i => !i.is_clean).length;
+  document.getElementById('wCnt').textContent = data.length + ' item' + (data.length!==1?'s':'') + (dirty ? ` · ${dirty} in wash` : '');
+  grid.innerHTML = data.map(item => {
+    const isClean = item.is_clean !== false;
+    const media = item.image
+      ? `<img class="wi-img" src="${item.image}" alt="${item.name}" loading="lazy">`
+      : `<div class="wi-swatch" style="background:${CHEX[item.color?.toLowerCase()]||'#888'}"></div>`;
+    return `<div class="wi" id="wi-${item.id}" style="${!isClean?'opacity:.55':''}">
+      <button class="del-btn" onclick="delItem('${item.id}')">✕</button>
+      ${media}
+      <div class="wi-name">${item.name}</div>
+      <div class="wi-cat">${item.category}</div>
+      <div class="wi-occ">${(item.occasions||[]).join(' · ')}</div>
+      <div class="wi-actions">
+        <button class="clean-btn ${isClean?'clean':'dirty'}" id="cb-${item.id}"
+                onclick="toggleClean('${item.id}')">
+          ${isClean ? '✓ Clean' : '⟳ In wash'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function delItem(id) {
+  await fetch('/api/wardrobe/'+id, {method:'DELETE'});
+  loadWardrobe();
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+function initChat() {
+  const el = document.getElementById('chatMsgs');
+  el.innerHTML = '';
+  const welcomes = {
+    kawaii:`Kyaaa~ hiii!! Ready to look super cute? 🎀`,gyaru:`Heyyy gorgeous! 💅 What look are we serving?`,
+    emo:`...hey. 🖤 Let's craft your aesthetic.`,minimalist:`Hello. Let's keep it clean and intentional.`,
+    formal:`Good day. Let's build something polished.`,streetwear:`Yooo! 🧢 What are we cooking today?`,
+    cottagecore:`Hello lovely! 🌿 Meadow fashion awaits!`,y2k:`Omg hiii bestie!! ✨ Let's be totally iconic!`,
+  };
+  const extras = [];
+  if (curSeason && SEASONS[curSeason]) extras.push(`I know you're a **${SEASONS[curSeason].name}** season`);
+  if (curBody && BODIES[curBody]) extras.push(`I'll factor in your **${BODIES[curBody].name}** body type`);
+  const extra = extras.length ? ' ' + extras.join(' and ') + '.' : '';
+  appendMsg('ai', (welcomes[curStyle]||`Hey! I'm your ${STYLES[curStyle]?.name} AI stylist ✨`) + extra);
+}
+
+function appendMsg(role, text) {
+  const el  = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+  div.className = 'cm ' + (role==='user'?'u':'a');
+  const html = text
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\[(.*?)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+  div.innerHTML = `<div class="av">${role==='user'?'👤':'✦'}</div><div class="mb">${html}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function showTyping() {
+  const el  = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+  div.className='cm a'; div.id='typing';
+  div.innerHTML=`<div class="av">✦</div><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  el.appendChild(div); el.scrollTop=el.scrollHeight;
+}
+
+async function sendMsg() {
+  const inp = document.getElementById('cin');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  appendMsg('user', msg);
+  showTyping();
+  const res  = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({message:msg, style:curStyle, history:chatHist, color_season:curSeason, body_type:curBody})});
+  const data = await res.json();
+  document.getElementById('typing')?.remove();
+  appendMsg('ai', data.response);
+  document.getElementById('poweredBy').textContent = 'Powered by ' + (data.powered_by||'Vouge AI');
+  chatHist.push({role:'user',content:msg},{role:'assistant',content:data.response});
+  if (chatHist.length>20) chatHist=chatHist.slice(-20);
+}
+
+// ── Shop ──────────────────────────────────────────────────────────────────────
+async function loadShop(style) {
+  const res = await fetch('/api/shop/'+style);
+  const d   = await res.json();
+  const dots  = (d.hex||[]).map((h,i)=>`<div class="pal-dot" style="background:${h}" title="${(d.colors||[])[i]||''}"></div>`).join('');
+  const brands= (d.brands||[]).map(b=>`<div class="brand-it"><div class="brand-dot"></div>${b}</div>`).join('');
+  const links = (d.links||[]).map(l=>`<div class="slink-item"><div class="slink-lbl">${l.term}</div><div class="slink-btns"><a class="slb" href="${l.google}" target="_blank">Google</a><a class="slb" href="${l.asos}" target="_blank">ASOS</a><a class="slb" href="${l.pinterest}" target="_blank">Pinterest</a><a class="slb" href="${l.depop}" target="_blank">Depop</a></div></div>`).join('');
+  document.getElementById('shopArea').innerHTML = `
+    <div class="shop-hdr"><div class="sh-emoji">${d.emoji}</div><div class="sh-info"><h2>${d.name}</h2><div class="sh-tag">${d.tagline}</div><div class="sh-desc">${d.description}</div><div class="pal-row">${dots}<span class="pal-lbl">${(d.colors||[]).join(' · ')}</span></div></div></div>
+    <div class="shop-grid"><div class="shc"><div class="shc-t">Recommended Brands</div><div class="brand-list">${brands}</div></div><div class="shc"><div class="shc-t">Search & Buy</div><div class="slinks">${links}</div></div></div>`;
+}
+
+// ── Clean / Dirty toggle ─────────────────────────────────────────────────────
+async function toggleClean(id) {
+  const res  = await fetch('/api/wardrobe/'+id+'/toggle-clean', {method:'PATCH'});
+  const data = await res.json();
+  const btn  = document.getElementById('cb-'+id);
+  const card = document.getElementById('wi-'+id);
+  const clean = data.is_clean;
+  btn.textContent = clean ? '✓ Clean' : '⟳ In wash';
+  btn.className   = 'clean-btn ' + (clean ? 'clean' : 'dirty');
+  card.style.opacity = clean ? '1' : '0.55';
+  // Update count badge
+  const wRes   = await fetch('/api/wardrobe');
+  const wItems = await wRes.json();
+  const dirty  = wItems.filter(i => !i.is_clean).length;
+  document.getElementById('wCnt').textContent = wItems.length + ' item' + (wItems.length!==1?'s':'') + (dirty ? ` · ${dirty} in wash` : '');
+}
+
+// ── Capsule Wardrobe Analysis ─────────────────────────────────────────────────
+async function runCapsuleAnalysis() {
+  const area = document.getElementById('capsuleArea');
+  area.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--mt)">Analysing your wardrobe...</div>';
+  const res = await fetch('/api/capsule-analysis');
+  const d   = await res.json();
+  if (d.error) { area.innerHTML = `<div style="color:var(--mt);padding:12px 0;font-size:13px">${d.error}</div>`; return; }
+
+  const cats = d.category_counts || {};
+  const catOrder = ['top','dress','bottom','shoes','outerwear','accessory'];
+  const bars = catOrder.map(c => {
+    const count = cats[c] || 0;
+    const pct = Math.min(100, count * 20);
+    return `<div class="caps-bar-row">
+      <div class="caps-bar-label">${c}</div>
+      <div class="caps-bar"><div class="caps-bar-fill" style="width:${pct}%"></div></div>
+      <div class="caps-bar-val">${count}</div>
+    </div>`;
+  }).join('');
+
+  const gaps = (d.gaps||[]).map(g => `<div class="gap-item"><div class="gap-icon">!</div><div class="gap-text">${g[1]}</div></div>`).join('');
+  const upgradeMsg = d.projected_combos > d.outfit_combos
+    ? `Fill the gaps above and you could unlock up to <strong>${d.projected_combos} outfit combos</strong> — ${d.projected_combos - d.outfit_combos} more than now.`
+    : `Your wardrobe is well-rounded! You currently have <strong>${d.outfit_combos} outfit combos</strong>.`;
+
+  area.innerHTML = `<div class="capsule-card">
+    <div class="caps-stats">
+      <div class="caps-stat"><div class="caps-stat-num">${d.total_items}</div><div class="caps-stat-lbl">Items</div></div>
+      <div class="caps-stat"><div class="caps-stat-num" style="color:var(--ac)">${d.outfit_combos}</div><div class="caps-stat-lbl">Outfit Combos</div></div>
+      <div class="caps-stat"><div class="caps-stat-num">${d.color_variety}</div><div class="caps-stat-lbl">Colors</div></div>
+      <div class="caps-stat"><div class="caps-stat-num" style="color:${d.dirty_count>0?'#E67E22':'#27AE60'}">${d.dirty_count}</div><div class="caps-stat-lbl">In Wash</div></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mt);margin-bottom:10px">Items by Category</div>
+    ${bars}
+    ${gaps ? `<div class="gap-list"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#E67E22;margin-bottom:8px;margin-top:14px">Wardrobe Gaps</div>${gaps}</div>` : ''}
+    <div class="caps-upgrade">${upgradeMsg}</div>
+  </div>`;
+}
+
+// ── Color Season ──────────────────────────────────────────────────────────────
+function quizHint(el, seasons, label) {
+  document.querySelectorAll('.quiz-opt').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on');
+  // Visually highlight matching season cards
+  const matching = seasons.split(',');
+  document.querySelectorAll('.season-card').forEach(c=>{
+    const key = c.id.replace('sea-','');
+    c.style.opacity = matching.includes(key) ? '1' : '0.4';
+  });
+}
+
+function selectSeason(key) {
+  curSeason = key;
+  document.querySelectorAll('.season-card').forEach(c=>{ c.classList.remove('on'); c.style.opacity='1'; });
+  document.getElementById('sea-'+key).classList.add('on');
+  const s = SEASONS[key];
+  document.getElementById('seasonBadge').textContent = s.emoji + ' ' + s.name;
+  document.getElementById('seasonBadge').style.display = 'flex';
+  renderSeasonDetail(key, s);
+  chatHist = [];
+  initChat();
+}
+
+function renderSeasonDetail(key, s) {
+  const swatches = (s.palette_hex||[]).map((h,i)=>`<div class="sd-swatch"><div class="sd-sw-dot" style="background:${h}"></div><div class="sd-sw-name">${(s.palette_names||[])[i]||''}</div></div>`).join('');
+  const bestTags = (s.best_colors||[]).map(c=>`<span class="sd-tag-item good">${c}</span>`).join('');
+  const avoidTags= (s.avoid||[]).map(c=>`<span class="sd-tag-item avoid">${c}</span>`).join('');
+  document.getElementById('seasonDetail').innerHTML = `
+    <div class="season-detail">
+      <div class="sd-header"><div class="sd-emoji">${s.emoji}</div><div><div class="sd-name">${s.name}</div><div class="sd-tag">${s.tagline} · ${s.undertone} undertones</div></div></div>
+      <div class="sd-desc">${s.description}</div>
+      <div class="sd-section-t">Your Palette</div>
+      <div class="sd-palette">${swatches}</div>
+      <div class="sd-section-t">Wear These</div>
+      <div class="sd-list">${bestTags}</div>
+      <div class="sd-section-t">Avoid These</div>
+      <div class="sd-list">${avoidTags}</div>
+      <div class="sd-tip">${s.style_tip}</div>
+      <div class="sd-celebrities">Style icons with your season: ${(s.celebrities||[]).join(', ')}</div>
+    </div>`;
+}
+
+// ── Body Type ─────────────────────────────────────────────────────────────────
+function selectBody(key) {
+  curBody = key;
+  document.querySelectorAll('.bt-card').forEach(c=>c.classList.remove('on'));
+  document.getElementById('bt-'+key).classList.add('on');
+  const b = BODIES[key];
+  document.getElementById('bodyBadge').textContent = b.emoji + ' ' + b.name;
+  document.getElementById('bodyBadge').style.display = 'flex';
+  renderBodyDetail(key, b);
+  chatHist = [];
+  initChat();
+}
+
+function renderBodyDetail(key, b) {
+  const doList   = (b.do_wear||[]).map(i=>`<div class="bt-list-item green">${i}</div>`).join('');
+  const avoidList= (b.avoid||[]).map(i=>`<div class="bt-list-item red">${i}</div>`).join('');
+  const ideas    = (b.outfit_ideas||[]).map(i=>`<div class="outfit-idea-item">✦ ${i}</div>`).join('');
+  document.getElementById('bodyDetail').innerHTML = `
+    <div class="bt-detail">
+      <div class="bt-header"><div class="bt-hdr-emoji">${b.emoji}</div><div><div class="bt-hdr-name">${b.name}</div><div class="bt-hdr-tag">${b.tagline}</div></div></div>
+      <div class="bt-desc">${b.description}</div>
+      <div class="bt-goal">${b.goal}</div>
+      <div class="two-col">
+        <div><div class="tc-title green">What to wear</div><div class="bt-list">${doList}</div></div>
+        <div><div class="tc-title red">What to avoid</div><div class="bt-list">${avoidList}</div></div>
+      </div>
+      <div class="outfit-ideas"><div class="tc-title" style="margin-top:14px;margin-bottom:8px;color:var(--ac)">Outfit Ideas</div>${ideas}</div>
+    </div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initChat();
+loadSavedOutfits();
+</script>
+</body>
+</html>
