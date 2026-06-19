@@ -1,10 +1,16 @@
-import sys, os, json, random, base64
+import sys, os, json, random, base64, re
 from flask import Flask, render_template, request, jsonify
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'ai'))
 from clothing_item import ClothingItem, Category, Occasion, Weather, Wardrobe
 from recommendation_engine import RecommendationEngine
 from color_rules import color_compatibility_score
+
+try:
+    from groq import Groq as GroqClient
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
 
 try:
     import anthropic
@@ -261,62 +267,148 @@ def compute_verdict(items: list) -> dict:
 
 # ── Rule-based chat ────────────────────────────────────────────────────────────
 def rule_chat(msg, style, wardrobe, color_season=None, body_type=None):
-    p   = STYLES.get(style, STYLES['minimalist'])
-    ml  = msg.lower()
-    greet   = any(w in ml for w in ['hi','hello','hey','sup'])
-    outfit  = any(w in ml for w in ['wear','outfit','suggest','recommend','style me','what should'])
-    shop    = any(w in ml for w in ['buy','shop','purchase','find','where','shopping'])
-    colors  = any(w in ml for w in ['color','colour','palette','season'])
-    brands  = any(w in ml for w in ['brand','store','label'])
-    tip     = any(w in ml for w in ['tip','advice','how to','help','guide'])
-    body_q  = any(w in ml for w in ['body','shape','figure','flatter'])
+    p  = STYLES.get(style, STYLES['minimalist'])
+    ml = msg.lower().strip()
 
-    # Context-aware prefix
+    # ── intent flags (whole-word safe) ────────────────────────────────────────
+    def has(text, *phrases):
+        """Return True if any phrase matches as a whole word/phrase in text."""
+        for ph in phrases:
+            if re.search(r'(?<!\w)' + re.escape(ph) + r'(?!\w)', text):
+                return True
+        return False
+
+    greet    = has(ml,'hi','hello','hey','sup','yo','hii','hola','howdy',
+                       'how are','how r u','how r you','good morning','good evening','good night',
+                       'wassup',"what's up",'whats up')
+    feeling  = has(ml,'how are','how r','feeling','doing','fine','good','great','bad','okay','ok')
+    outfit   = has(ml,'wear','outfit','suggest','recommend','style me','what should',
+                       'what to wear','look','pick','put together','match')
+    occasion = has(ml,'party','date','wedding','work','office','gym','sport','beach',
+                       'formal','casual','night out','brunch','school','college','interview',
+                       'festival','concert','dinner','event','birthday','going out')
+    shop     = has(ml,'buy','shop','shopping','purchase','find','where to get','order','store','online')
+    colors   = has(ml,'color','colour','palette','season','shade','tone','hue')
+    tip      = has(ml,'tip','advice','how to','help','guide','trick','hack','rule')
+    body_q   = has(ml,'body','shape','figure','flatter','slim','frame','body type')
+    wardrobe_q = has(ml,'wardrobe','closet','clothes','clothing','what do i have','what i own')
+    accessory_q= has(ml,'accessory','bag','shoes','jewel','necklace','earring','belt','hat','scarf')
+    thank    = has(ml,'thank','thanks','thx','perfect','love it','amazing','awesome','that helped')
+    negative = has(ml,'nah','not really','boring','meh','ugly','hate','dislike','dont like',"don't like")
+
+    # ── profile context suffix ─────────────────────────────────────────────────
     profile_ctx = ""
+    cs_data, bt_data = None, None
     if color_season and color_season in COLOR_SEASONS:
-        cs = COLOR_SEASONS[color_season]
-        profile_ctx += f" Your color season is {cs['name']} ({cs['tagline']}) — your best colors are {', '.join(cs['best_colors'][:3])}."
+        cs_data = COLOR_SEASONS[color_season]
+        profile_ctx += f" As a **{cs_data['name']}** season, lean into {cs_data['best_colors'][0]} tones."
     if body_type and body_type in BODY_TYPES:
-        bt = BODY_TYPES[body_type]
-        profile_ctx += f" Your body type is {bt['name']} — {bt['goal'].lower()}."
+        bt_data = BODY_TYPES[body_type]
 
-    if body_q and body_type and body_type in BODY_TYPES:
-        bt = BODY_TYPES[body_type]
-        do  = ', '.join(bt['do_wear'][:3])
-        av  = bt['avoid'][0]
-        return f"For your {bt['name']} body type, your goal is to {bt['goal'].lower()}. Reach for: {do}. Avoid: {av}. {bt['tips']}"
+    # ── wardrobe items by occasion ─────────────────────────────────────────────
+    def wardrobe_pick(occ_filter=None):
+        pool = [i for i in wardrobe if not occ_filter or occ_filter in i.get('occasions',[])]
+        if not pool: pool = wardrobe
+        if not pool: return None
+        return random.sample(pool, min(3, len(pool)))
 
-    if colors and color_season and color_season in COLOR_SEASONS:
-        cs = COLOR_SEASONS[color_season]
-        bc = ', '.join(f"**{c}**" for c in cs['best_colors'][:4])
-        return f"As a {cs['name']} season, your best colors are: {bc}. {cs['style_tip']} Avoid: {', '.join(cs['avoid'][:2])}."
+    # ── responses — occasion first so "party/night out" beats "greet" ──────────
+
+    if body_q and bt_data:
+        do  = ', '.join(bt_data['do_wear'][:3])
+        av  = bt_data['avoid'][0]
+        return f"For your **{bt_data['name']}** body type — goal: {bt_data['goal']}. **Wear:** {do}. **Skip:** {av}. {bt_data['tips']}"
+
+    if colors and cs_data:
+        bc = ', '.join(f"**{c}**" for c in cs_data['best_colors'][:4])
+        return f"As a **{cs_data['name']}** season — your power colors are: {bc}. {cs_data['style_tip']} Avoid: {', '.join(cs_data['avoid'][:2])}."
+
+    # Occasion check runs before greet so "night out / party / wedding" don't get swallowed
+    if occasion:
+        occ_map = {'party':'party','date':'party','night out':'party','birthday':'party',
+                   'work':'work','office':'work','interview':'work',
+                   'wedding':'formal','formal':'formal','dinner':'formal',
+                   'gym':'sport','sport':'sport','beach':'casual',
+                   'school':'casual','college':'casual','brunch':'casual','festival':'casual','concert':'casual'}
+        matched_occ = next((occ_map[k] for k in occ_map if k in ml), 'casual')
+        picks = wardrobe_pick(matched_occ)
+        occ_tips = {
+            'party':   {'kawaii':"Go all out — sequins, pastels, bows 🎀",'emo':"Dark velvet or a band tee with fishnets 🖤",'minimalist':"A sleek monochrome set — let the cut do the talking.",'streetwear':"Statement sneakers + an oversized graphic tee 🔥",'cottagecore':"A floral midi with puffed sleeves 🌸",'y2k':"Metallic mini + platform heels, obviously ✨",'gyaru':"Go full glam — the bolder the better 💅",'formal':"A sharp blazer dress or tailored suit."},
+            'work':    {'kawaii':"Soft pastels in structured silhouettes — office cute! 🎀",'emo':"Dark tailored pieces — professional with edge 🖤",'minimalist':"A crisp white shirt + well-fitted trousers. Nothing more needed.",'streetwear':"Clean sneakers + tidy joggers + a structured jacket 🧢",'cottagecore':"Linen blouse + wide-leg trousers in earthy tones 🌿",'y2k':"Low-rise trousers + a fitted cardigan ✨",'gyaru':"Polished glam — fitted blazer, heels, done 💅",'formal':"Classic navy or charcoal suit with quality leather shoes."},
+            'formal':  {'kawaii':"A pastel ball gown or sweet A-line 🎀",'emo':"All-black formal — a tailored suit or long dark gown 🖤",'minimalist':"A column dress or perfectly cut suit in ivory or black.",'streetwear':"An elevated monochrome look — it's giving fashion week 🔥",'cottagecore':"A floral maxi with delicate details 🌸",'y2k':"A glamorous two-piece set or slinky slip dress ✨",'gyaru':"Full glam evening look — drama is the dress code 💅",'formal':"Tailored suit or floor-length gown. Clean, sharp, authoritative."},
+            'casual':  {'kawaii':"Comfy pastels — cute hoodie + mini skirt 🎀",'emo':"Ripped jeans + band tee + boots 🖤",'minimalist':"White tee + straight-leg jeans + clean sneakers. Done.",'streetwear':"Oversized hoodie + cargo pants 🧢",'cottagecore':"A flowy blouse + linen trousers 🌿",'y2k':"Crop top + low-rise jeans + chunky trainers ✨",'gyaru':"Cute casual — mini skirt + fitted top 💅",'formal':"Smart casual — a blazer over a simple tee goes far."},
+            'sport':   {'kawaii':None,'emo':None,'minimalist':"Monochrome activewear — black set or grey. Clean.",'streetwear':"Matching tracksuit or oversized tee + joggers 🔥",'cottagecore':None,'y2k':None,'gyaru':None,'formal':None},
+        }
+        tip_str = (occ_tips.get(matched_occ,{}).get(style) or f"Pick your best {p['colors'][0]} piece and build around it!")
+        if picks:
+            combo = " + ".join(f"**{x['name']}**" for x in picks[:2])
+            return f"For a **{matched_occ}** occasion — from your wardrobe try: {combo}. {tip_str}{profile_ctx}"
+        return f"For **{matched_occ}** — {tip_str}{profile_ctx} Add pieces in **My Wardrobe** to get outfit picks from your actual clothes!"
+
+    if thank:
+        resps = {'kawaii':"Yay, I'm so happy I could help!! 🎀",'emo':"...glad it worked. 🖤",'minimalist':"Good.",'streetwear':"Bet! Go off 🔥",'cottagecore':"Oh how wonderful, enjoy! 🌸",'y2k':"Omg yesss! Go be iconic ✨",'gyaru':"You're gonna slay, gorgeous 💅",'formal':"Excellent. You'll make a strong impression."}
+        return resps.get(style, "Happy to help! Come back anytime 💫")
+
+    if feeling and greet:
+        resps = {'kawaii':"I'm always happy when I get to talk fashion!! 🎀 What cute look are we planning?",'emo':"Existing. 🖤 Let's channel that into a killer outfit — what's the vibe?",'minimalist':"Functioning. What are you dressing for today?",'streetwear':"Lowkey vibing 🧢 What are we putting together?",'cottagecore':"Floating through meadows thinking of florals 🌿 What's the occasion?",'y2k':"Living my best life bestie ✨ Tell me what we're wearing!",'gyaru':"Absolutely glowing 💅 Now let's make sure you are too — what's the plan?",'formal':"Very well, thank you. Now — what's the occasion?"}
+        return resps.get(style, f"Doing great! I'm your {p['name']} AI stylist — what are we styling today? ✨")
 
     if greet:
-        intros = {'kawaii':f"Kyaaa~ hiii!! 🎀 Ready to look super cute?{profile_ctx}",'emo':f"...hey. 🖤 Let's craft your aesthetic.{profile_ctx}",'minimalist':f"Hello. Clean and intentional.{profile_ctx}",'streetwear':f"Yooo! 🧢 What are we building?{profile_ctx}",'cottagecore':f"Hello lovely! 🌿 Meadow fashion awaits.{profile_ctx}",'y2k':f"Omg hiii bestie!! ✨ Let's be iconic!{profile_ctx}",'gyaru':f"Heyyy gorgeous 💅 Let's turn heads!{profile_ctx}",'formal':f"Good day. Let's build something polished.{profile_ctx}"}
-        return intros.get(style, f"Hey! I'm your {p['name']} AI stylist ✨{profile_ctx}")
+        intros = {'kawaii':f"Kyaaa~ hiii!! 🎀 Ready to look super cute?{profile_ctx}",'emo':f"...hey. 🖤 What aesthetic are we crafting?{profile_ctx}",'minimalist':f"Hello. What are you dressing for today?{profile_ctx}",'streetwear':f"Yooo! 🧢 What are we cooking?{profile_ctx}",'cottagecore':f"Hello lovely! 🌿 What's the occasion?{profile_ctx}",'y2k':f"Omg hiii bestie!! ✨ What look are we building?{profile_ctx}",'gyaru':f"Heyyy gorgeous! 💅 Let's make you iconic. What's the plan?{profile_ctx}",'formal':f"Good day. What occasion are we dressing for?{profile_ctx}"}
+        return intros.get(style, f"Hey! I'm your {p['name']} AI stylist ✨ What are we wearing?{profile_ctx}")
+
+    if wardrobe_q:
+        if not wardrobe:
+            return "Your wardrobe is empty right now! Head to **My Wardrobe** tab to add your clothes — then I can suggest outfits from what you actually own 👗"
+        cats = {}
+        for i in wardrobe:
+            cats.setdefault(i['category'], 0); cats[i['category']] += 1
+        summary = ', '.join(f"{v} {k}{'s' if v>1 else ''}" for k,v in cats.items())
+        return f"You have **{len(wardrobe)} items** in your wardrobe: {summary}. Want me to suggest an outfit from what you own?"
 
     if outfit:
-        if not wardrobe:
-            return f"Your wardrobe is empty! 👀 Add clothes in **My Wardrobe** first.{profile_ctx}"
-        picks = random.sample(wardrobe, min(2, len(wardrobe)))
-        combo = " + ".join(f"**{x['name']}**" for x in picks)
+        picks = wardrobe_pick()
+        if not picks:
+            return f"Your wardrobe is empty! Add clothes in **My Wardrobe** first, then I can suggest full looks 👗"
+        combo = " + ".join(f"**{x['name']}**" for x in picks[:2])
         kw = random.choice(p['keywords'])
-        return f"From your wardrobe, try: {combo}. Keep it {kw}!{profile_ctx}"
+        cs_bonus = f" These work especially well for your {cs_data['name']} season palette." if cs_data else ""
+        return f"From your wardrobe, try: {combo}. Keep it **{kw}**.{cs_bonus}{profile_ctx}"
 
     if shop:
-        brand = random.choice(p['brands'])
-        term  = p['searches'][0]
-        link  = f"https://www.google.com/search?q={term.replace(' ','+')}"
-        return f"For {p['name']} shopping, **{brand}** is a must! [Search: {term}]({link}) 🛍️{profile_ctx}"
+        brand  = random.choice(p['brands'])
+        term   = random.choice(p['searches'])
+        link   = f"https://www.google.com/search?q={term.replace(' ','+')}"
+        depop  = f"https://www.depop.com/search/?q={term.replace(' ','+')}"
+        return f"For **{p['name']}** shopping — **{brand}** is a go-to. [Search Google]({link}) or find vintage on [Depop]({depop}) 🛍️{profile_ctx}"
+
+    if accessory_q:
+        acc_tips = {'kawaii':"Hair clips, bows, platform shoes, and layered cute necklaces 🎀",'emo':"Chunky boots, studded belts, fishnet socks, and chain necklaces 🖤",'minimalist':"One clean leather bag and minimal gold jewellery — nothing more.",'streetwear':"A fitted cap, chunky sneakers, and a crossbody bag 🧢",'cottagecore':"Straw hat, floral hair pins, and woven basket bag 🌿",'y2k':"Butterfly clips, mini bag, and platform trainers ✨",'gyaru':"Statement bag, sky-high heels, and dramatic lashes 💅",'formal':"Classic watch, leather belt, and quality leather shoes."}
+        return acc_tips.get(style, f"For {p['name']}, accessories should complement your {p['colors'][0]} palette.") + (profile_ctx or "")
 
     if tip:
-        tips = {'kawaii':"Layer pastels and different textures — lace, velvet, chiffon. Accessories are EVERYTHING 🎀",'emo':"Add deep purples and dark reds for dimension. Layer a band tee under flannel 🖤",'minimalist':"Invest in fit over quantity. One perfect piece > five okay ones.",'streetwear':"Proportions are key — oversized top = slim bottom (or vice versa) 🧢",'cottagecore':"Thrift stores are goldmines for floral prints, linen, and vintage silhouettes 🌿",'y2k':"Low-rise + dainty jewellery layering instantly Y2Ks any outfit ✨",'gyaru':"Hair and makeup complete the look — it's 50% fashion, 50% glam 💅",'formal':"Your shoes tell the story — invest in quality leather footwear first."}
+        tips = {'kawaii':"Layer pastels + mix textures — lace, velvet, chiffon. Accessories are everything 🎀",'emo':"Add deep purples and dark reds for dimension. Layer a band tee under flannel 🖤",'minimalist':"Invest in fit over quantity. One perfectly fitting piece beats five okay ones.",'streetwear':"Proportions are key — oversized top = slim bottom. Or both oversized for maximum drip 🧢",'cottagecore':"Thrift stores are goldmines for florals, linen, and vintage silhouettes 🌿",'y2k':"Low-rise + layered dainty jewellery instantly Y2Ks any outfit ✨",'gyaru':"Hair and makeup complete the look — it's 50% fashion, 50% glam 💅",'formal':"Shoes tell the story — invest in quality leather footwear before anything else."}
         base = tips.get(style, f"{p['description']}. Start with {p['colors'][0]} basics.")
-        season_tip = f" Since you're a {COLOR_SEASONS[color_season]['name']}, wear {COLOR_SEASONS[color_season]['best_colors'][0]} tones." if color_season and color_season in COLOR_SEASONS else ""
+        season_tip = f" Since you're a **{cs_data['name']}** season, gravitate toward {cs_data['best_colors'][0]} tones." if cs_data else ""
         return base + season_tip
 
-    defaults = {'kawaii':"Oooh cute ideas incoming! 🎀 Daily cute or going out?","emo":"What's the mood — full dark or subtly alt? 🖤","minimalist":"What's the occasion? I'll curate the exact right pieces.","streetwear":"Cozy or clean? Day or night? 🔥","cottagecore":"Garden party, forest walk, or everyday fairy energy? 🌸","y2k'":"Britney 2003 or Paris Hilton chic? Both valid ✨","gyaru":"Full glam or casual today, gorgeous? 💅","formal":"Boardroom, gala, or interview? Let me tailor the perfect look."}
-    return defaults.get(style, f"Tell me more! I'm your {p['name']} style expert 💫")
+    if negative:
+        resps = {'kawaii':"Aww no worries!! 🎀 What vibe ARE we going for?","emo":"Dark. I respect it. 🖤 What does work for you?","minimalist":"Understood. What would you prefer instead?","streetwear":"Say less 🔥 What direction you thinking?","cottagecore":"Oh let's find something you love 🌿 What's your mood?","y2k":"Ok ok bestie ✨ What ARE we feeling then?","gyaru":"We pivot 💅 Tell me what speaks to your soul.","formal":"Duly noted. What would better suit your needs?"}
+        return resps.get(style, "No problem — tell me more about what you're looking for!")
+
+    # General fallback — varied, never the same twice
+    fallbacks = {
+        'kawaii':  ["Tell me the occasion and I'll make it SO cute 🎀","What aesthetic moment are we going for?? 🎀","Ooh what's the event? Tell me everything 🎀"],
+        'emo':     ["What's the mood — full dark or subtly alt? 🖤","Tell me the vibe. I'll find the fit. 🖤","What are we expressing today? 🖤"],
+        'minimalist':["What are you dressing for?","Tell me the occasion and I'll find the right piece.","What's the context — work, casual, or something special?"],
+        'streetwear':["Cozy or clean? Day or night? 🔥","What's the fit goal — comfy or flexing? 🧢","Give me the occasion and I'll deliver 🔥"],
+        'cottagecore':["Garden party, forest walk, or everyday fairy energy? 🌸","What's the occasion, lovely? 🌿","Tell me the vibe and I'll style you perfectly 🌸"],
+        'y2k':     ["Britney 2003 or Paris Hilton chic? Both valid ✨","What's the occasion bestie? I have SO many ideas ✨","Tell me everything — where are we going?? ✨"],
+        'gyaru':   ["Full glam or casual today, gorgeous? 💅","What's the event? I'll make you unforgettable 💅","Tell me the occasion and watch me work 💅"],
+        'formal':  ["Boardroom, gala, or interview? Let me tailor the look.","What's the occasion? I'll dress you to impress.","Tell me the context and I'll find the perfect look."],
+    }
+    options = fallbacks.get(style, [f"Tell me more! I'm your {p['name']} style expert 💫"])
+    return random.choice(options)
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route('/')
@@ -396,26 +488,60 @@ def chat():
     items   = load_wardrobe()
     p       = STYLES.get(style, STYLES['minimalist'])
     wsum    = "\n".join(f"- {i['name']} ({i['color']} {i['category']})" for i in items) or "No items yet."
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
 
     cs_ctx = f"\nUser's color season: {COLOR_SEASONS[csea]['name']} — best colors: {', '.join(COLOR_SEASONS[csea]['best_colors'][:4])}. Avoid: {', '.join(COLOR_SEASONS[csea]['avoid'][:2])}." if csea in COLOR_SEASONS else ""
     bt_ctx = f"\nUser's body type: {BODY_TYPES[btype]['name']} — goal: {BODY_TYPES[btype]['goal']}. Best cuts: {', '.join(BODY_TYPES[btype]['best_cuts'][:3])}." if btype in BODY_TYPES else ""
 
-    if ANTHROPIC_AVAILABLE and api_key:
-        system = f"""You are Vouge, a brilliant AI fashion stylist for the vougeabulary app.
-Style: {p['name']} ({p['tagline']}) — {p['description']}
-Colors: {', '.join(p['colors'])} | Keywords: {', '.join(p['keywords'])} | Brands: {', '.join(p['brands'])}{cs_ctx}{bt_ctx}
-User's wardrobe:\n{wsum}
-Rules: use wardrobe items when suggesting outfits; include Google search links as [Search: name](https://www.google.com/search?q=name+buy) for shopping;
-match tone (kawaii=bubbly🎀, emo=dramatic🖤, minimalist=precise, streetwear=cool🔥, cottagecore=dreamy🌿, y2k=bestie✨, gyaru=glam💅, formal=professional);
-always factor in the user's color season and body type if provided; keep responses 3-5 sentences, be specific and stylish."""
-        try:
-            client   = anthropic.Anthropic(api_key=api_key)
-            messages = (history or [])[-10:] + [{"role":"user","content":msg}]
-            resp     = client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=400, system=system, messages=messages)
-            return jsonify({'response': resp.content[0].text, 'powered_by': 'Claude AI'})
-        except Exception: pass
+    tone_map = {'kawaii':'bubbly, enthusiastic, use 🎀 and cute words','emo':'poetic and a little dramatic, dark humor, use 🖤','minimalist':'calm and precise, no fluff, short sharp sentences','streetwear':'casual and cool, hype energy, use 🔥 and 🧢','cottagecore':'gentle and dreamy, nature metaphors, use 🌿 and 🌸','y2k':'enthusiastic bestie energy, nostalgic, use ✨','gyaru':'confident and glamorous, use 💅','formal':'professional and direct, authoritative'}
 
+    system_prompt = f"""You are Vouge — a witty, knowledgeable AI fashion stylist inside the vougeabulary app. You have a real personality and can hold genuine conversations about anything, but you always bring it back to fashion, style, and helping the user look amazing.
+
+Current style aesthetic: {p['name']} ({p['tagline']}) — {p['description']}
+Style keywords: {', '.join(p['keywords'])}
+Recommended brands: {', '.join(p['brands'])}{cs_ctx}{bt_ctx}
+
+The user's wardrobe:
+{wsum}
+
+Your personality tone: {tone_map.get(style, 'friendly and helpful')}
+
+Rules:
+- Have real conversations — respond naturally to greetings, feelings, small talk, then steer toward fashion
+- When suggesting outfits, always reference specific items from the user's wardrobe above
+- For shopping, include clickable links like [Shop on ASOS](https://www.asos.com/search/?q=query) or [Search Google](https://www.google.com/search?q=query)
+- Factor in the user's color season and body type when giving advice
+- Keep replies conversational — 2 to 4 sentences, never robotic or listy unless asked
+- Never say "As an AI" or break character"""
+
+    messages_to_send = (history or [])[-12:] + [{"role": "user", "content": msg}]
+
+    # Try Groq first (free)
+    groq_key = os.environ.get('GROQ_API_KEY', '')
+    if GROQ_AVAILABLE and groq_key:
+        try:
+            client = GroqClient(api_key=groq_key)
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": system_prompt}] + messages_to_send,
+                max_tokens=400,
+                temperature=0.85,
+            )
+            return jsonify({'response': resp.choices[0].message.content, 'powered_by': 'Vouge AI'})
+        except Exception:
+            pass
+
+    # Try Anthropic second
+    anthropic_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if ANTHROPIC_AVAILABLE and anthropic_key:
+        try:
+            client = anthropic.Anthropic(api_key=anthropic_key)
+            resp   = client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=400,
+                       system=system_prompt, messages=messages_to_send)
+            return jsonify({'response': resp.content[0].text, 'powered_by': 'Vouge AI'})
+        except Exception:
+            pass
+
+    # Rule-based fallback
     return jsonify({'response': rule_chat(msg, style, items, csea, btype), 'powered_by': 'Vouge AI'})
 
 @app.route('/api/shop/<style>')
