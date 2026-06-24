@@ -1,5 +1,7 @@
 import sys, os, json, random, base64, re
-from flask import Flask, render_template, request, jsonify
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, session, redirect
+from werkzeug.security import generate_password_hash, check_password_hash
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'ai'))
 from clothing_item import ClothingItem, Category, Occasion, Weather, Wardrobe
@@ -19,10 +21,21 @@ except ImportError:
     ANTHROPIC_AVAILABLE = False
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'vouge-luxury-secret-2024')
 
 DATA_DIR         = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
-WARDROBE_FILE    = os.path.join(DATA_DIR, 'wardrobe.json')
-SAVED_FITS_FILE  = os.path.join(DATA_DIR, 'saved_outfits.json')
+WARDROBE_FILE    = os.path.join(DATA_DIR, 'wardrobe.json')   # default items for new users
+WARDROBES_FILE   = os.path.join(DATA_DIR, 'wardrobes.json')  # per-user wardrobes
+SAVED_FITS_FILE  = os.path.join(DATA_DIR, 'saved_fits_db.json')
+USERS_FILE       = os.path.join(DATA_DIR, 'users.json')
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'username' not in session:
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated
 
 # ── Style profiles ─────────────────────────────────────────────────────────────
 STYLES = {
@@ -177,23 +190,54 @@ COLOR_HEX = {
 }
 
 # ── Data helpers ───────────────────────────────────────────────────────────────
+def _wardrobes():
+    if os.path.exists(WARDROBES_FILE):
+        with open(WARDROBES_FILE) as f: return json.load(f)
+    return {}
+
+def _save_wardrobes(db):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(WARDROBES_FILE, 'w') as f: json.dump(db, f, indent=2)
+
 def load_wardrobe():
-    if os.path.exists(WARDROBE_FILE):
-        with open(WARDROBE_FILE) as f: return json.load(f)
-    return []
+    user = session.get('username', 'guest')
+    db   = _wardrobes()
+    if user not in db:
+        default = json.load(open(WARDROBE_FILE)) if os.path.exists(WARDROBE_FILE) else []
+        db[user] = default
+        _save_wardrobes(db)
+    return db[user]
 
 def save_wardrobe(items):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(WARDROBE_FILE, 'w') as f: json.dump(items, f, indent=2)
+    user = session.get('username', 'guest')
+    db   = _wardrobes()
+    db[user] = items
+    _save_wardrobes(db)
 
-def load_saved_fits():
+def _fits_db():
     if os.path.exists(SAVED_FITS_FILE):
         with open(SAVED_FITS_FILE) as f: return json.load(f)
-    return []
+    return {}
+
+def load_saved_fits():
+    user = session.get('username', 'guest')
+    return _fits_db().get(user, [])
 
 def save_saved_fits(fits):
+    user = session.get('username', 'guest')
+    db   = _fits_db()
+    db[user] = fits
     os.makedirs(DATA_DIR, exist_ok=True)
-    with open(SAVED_FITS_FILE, 'w') as f: json.dump(fits, f, indent=2)
+    with open(SAVED_FITS_FILE, 'w') as f: json.dump(db, f, indent=2)
+
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE) as f: return json.load(f)
+    return {}
+
+def save_users(users):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(USERS_FILE, 'w') as f: json.dump(users, f, indent=2)
 
 def to_engine(items):
     w = Wardrobe()
@@ -410,11 +454,63 @@ def rule_chat(msg, style, wardrobe, color_season=None, body_type=None):
     options = fallbacks.get(style, [f"Tell me more! I'm your {p['name']} style expert 💫"])
     return random.choice(options)
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
+# ── Auth routes ────────────────────────────────────────────────────────────────
+@app.route('/login')
+def login_page():
+    if 'username' in session:
+        return redirect('/')
+    return render_template('login.html')
+
+@app.route('/api/login', methods=['POST'])
+def do_login():
+    data     = request.json
+    username = data.get('username', '').strip().lower()
+    password = data.get('password', '')
+    if not username or not password:
+        return jsonify({'error': 'Fill in both fields'}), 400
+    users = load_users()
+    if username not in users:
+        return jsonify({'error': 'No account found — sign up first'}), 401
+    if not check_password_hash(users[username]['password'], password):
+        return jsonify({'error': 'Wrong password'}), 401
+    session['username']     = username
+    session['display_name'] = users[username].get('display_name', username)
+    return jsonify({'success': True})
+
+@app.route('/api/register', methods=['POST'])
+def do_register():
+    data         = request.json
+    username     = data.get('username', '').strip().lower()
+    password     = data.get('password', '')
+    display_name = data.get('display_name', '').strip() or username
+    if not username or not password:
+        return jsonify({'error': 'Fill in all fields'}), 400
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    users = load_users()
+    if username in users:
+        return jsonify({'error': 'Username already taken — try another'}), 409
+    users[username] = {
+        'password':     generate_password_hash(password),
+        'display_name': display_name,
+    }
+    save_users(users)
+    session['username']     = username
+    session['display_name'] = display_name
+    return jsonify({'success': True})
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
+
+# ── Main app ────────────────────────────────────────────────────────────────────
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html', styles=STYLES, color_hex=COLOR_HEX,
-                           color_seasons=COLOR_SEASONS, body_types=BODY_TYPES)
+                           color_seasons=COLOR_SEASONS, body_types=BODY_TYPES,
+                           display_name=session.get('display_name',''))
 
 @app.route('/api/wardrobe', methods=['GET'])
 def get_wardrobe(): return jsonify(load_wardrobe())

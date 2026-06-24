@@ -1,0 +1,6 @@
+{
+  "testuser": {
+    "password": "scrypt:32768:8:1$ks3dgfBLBdfRKNev$6ce05607bbfb7263f3721e05b5bfd3cfd131397bb0860c7d2875c59ca557e1c5af184b795815ed4ab8b819b637cc90438f7cc5f2aaca7b677dfcc0811a2f6199",
+    "display_name": "Test"
+  }
+}
