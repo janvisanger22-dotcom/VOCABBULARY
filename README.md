@@ -1,20 +1,57 @@
-# VOCABLUARY
-it  is an intelligent fashion assistant that helps users decide what to wear based on the clothes they already own and items they may want to buy. The app blends wardrobe management, outfit recommendations, and AI‑powered fashion logic to make dressing simpler, smarter, and more personalized.
+VOGUEABULARY — AI-Based Smart Styling System
 
-Project Leader
-Janvi Kumari
+## Description
+VOGUEABULARY is an AI-powered application that helps users manage their wardrobe and receive intelligent outfit recommendations based on style, weather, and occasion.
+
+---
+
+## Live Application
+https://vogueabulary.onrender.com/
+
+---
+
+## Features
+- Digital wardrobe management
+- AI outfit recommendation system
+- Style, colour, and weather-based filtering
+- Outfit evaluation (AI verdict)
+- Personalized styling suggestions
+
+---
+
+## Technology Stack
+- Frontend: Google AI Studio (UI Prototype)
+- Backend: Python + FastAPI (Conceptual)
+- Database: MongoDB / Firebase (Conceptual)
+- AI: Rule-based recommendation system
+- Deployment: Render
+
+---
+
+## System Flow
+User → Frontend → Backend → Database → AI → Output
+
+---
 
 ## Project Structure
 
-- /documentation → all design documents
+- /documentation → design documents
 - /reports → final report
-- /logs → weekly progress logs
-- /data → dataset files
-- /screenshots → application screenshots
+- /logs → progress logs
+- /data → dataset
+- /screenshots → app preview
 
-Future Improvements
+---
 
-- Integration with real-time weather API
-- Advanced AI model for better recommendations
+## Team Members
+- Janvi Kumari — Project Leader & Database
+- Raman — Frontend
+- Harmanpreet — Backend
+- Samaira — AI System
+
+---
+
+## Future Improvements
+- Real-time weather API integration
+- Advanced ML-based recommendations
 - Mobile application version
-- Personalized shopping recommendations
