@@ -9,3 +9,9 @@ it  is an intelligent fashion assistant that helps users decide what to wear bas
 - /data → dataset files
 - /screenshots → application screenshots
 
+Future Improvements
+
+- Integration with real-time weather API
+- Advanced AI model for better recommendations
+- Mobile application version
+- Personalized shopping recommendations
