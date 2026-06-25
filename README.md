@@ -55,3 +55,15 @@ User → Frontend → Backend → Database → AI → Output
 - Real-time weather API integration
 - Advanced ML-based recommendations
 - Mobile application version
+
+- ## Problem Statement
+Many users face difficulty in selecting outfits due to lack of organization and styling guidance.
+
+## Solution
+VOGUEABULARY provides an AI-based system that helps users manage their wardrobe and receive personalized outfit recommendations.
+
+
+##Deployment
+
+The application is deployed using Render:
+https://vogueabulary.onrender.com/
