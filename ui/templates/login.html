@@ -3,39 +3,69 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>vougeabulary — Sign In</title>
+<title>Vogueabulary — Sign In</title>
+{% if google_client_id %}
+<meta name="google-signin-client_id" content="{{ google_client_id }}">
+{% endif %}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0A0A0A;--cd:#1C1C1C;--br:#2A2A2A;--tx:#F0F0F0;--mt:#888;--ac:#C8B89A;--fn:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
-body{font-family:var(--fn);background:var(--bg);color:var(--tx);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(200,184,154,.07),transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(200,184,154,.05),transparent 60%);pointer-events:none}
-.card{width:100%;max-width:420px;background:var(--cd);border:1px solid var(--br);border-radius:24px;padding:44px 40px;position:relative;animation:up .5s ease}
-@keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.logo{font-size:26px;font-weight:900;background:linear-gradient(135deg,#C8B89A,#F0B429);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;margin-bottom:6px}
-.tagline{font-size:12px;color:var(--mt);margin-bottom:32px}
-.tabs{display:flex;gap:0;background:rgba(255,255,255,.04);border-radius:10px;padding:4px;margin-bottom:28px}
-.tab{flex:1;padding:8px;border:none;background:transparent;color:var(--mt);font-size:13px;font-weight:600;cursor:pointer;border-radius:7px;transition:.2s;font-family:var(--fn)}
-.tab.on{background:var(--br);color:var(--tx)}
-.fg{margin-bottom:16px}
-.fl{font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px}
-.fi{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--br);border-radius:10px;color:var(--tx);padding:11px 14px;font-size:14px;font-family:var(--fn);outline:none;transition:.2s}
-.fi:focus{border-color:var(--ac);background:rgba(200,184,154,.06)}
-.fi::placeholder{color:var(--mt)}
-.err{font-size:12px;color:#E74C3C;margin-bottom:12px;min-height:16px;display:none}
-.err.show{display:block}
-.submit-btn{width:100%;padding:13px;background:linear-gradient(135deg,#C8B89A,#F0B429);border:none;border-radius:10px;color:#111;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--fn);transition:.2s;margin-top:4px;letter-spacing:.3px}
-.submit-btn:hover{opacity:.9;transform:translateY(-1px)}.submit-btn:active{transform:translateY(0)}
-.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--mt);font-size:11px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--br)}
+:root{--bg1:#EDE9F6;--bg2:#D4C6EE;--card:#FFFFFF;--tx:#111827;--mt:#6B7280;--border:#E5E7EB;--ac:#7C3AED;--btn:#111111;--fn:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+body{font-family:var(--fn);min-height:100vh;background:linear-gradient(135deg,var(--bg1) 0%,var(--bg2) 50%,#E8E0F5 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+.card{width:100%;max-width:440px;background:var(--card);border-radius:24px;padding:48px 44px;box-shadow:0 4px 40px rgba(124,58,237,.12);animation:up .45s ease}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* Logo */
+.logo-wrap{display:flex;justify-content:center;margin-bottom:24px}
+.logo-circle{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A855F7);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(124,58,237,.35)}
+.logo-v{font-size:32px;font-weight:900;color:white;letter-spacing:-1px}
+
+.title{font-size:26px;font-weight:800;color:var(--tx);text-align:center;margin-bottom:8px}
+.subtitle{font-size:14px;color:var(--mt);text-align:center;line-height:1.5;margin-bottom:32px}
+
+/* Tabs */
+.tabs{display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:10px 0;background:none;border:none;font-size:14px;font-weight:600;color:var(--mt);cursor:pointer;font-family:var(--fn);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.2s}
+.tab.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+/* Form */
 .form-section{display:none}.form-section.on{display:block;animation:up .3s ease}
-.welcome-name{font-size:18px;font-weight:700;margin-bottom:2px}
+.fg{margin-bottom:18px}
+.fl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.fl{font-size:11px;font-weight:700;color:var(--tx);text-transform:uppercase;letter-spacing:.7px}
+.forgot{font-size:12px;font-weight:600;color:var(--ac);text-decoration:none;cursor:pointer}
+.forgot:hover{text-decoration:underline}
+.input-wrap{position:relative;display:flex;align-items:center}
+.input-icon{position:absolute;left:14px;color:var(--mt);font-size:15px;pointer-events:none}
+.fi{width:100%;background:#F9FAFB;border:1.5px solid var(--border);border-radius:12px;color:var(--tx);padding:11px 14px 11px 40px;font-size:14px;font-family:var(--fn);outline:none;transition:.2s}
+.fi:focus{border-color:var(--ac);background:#fff;box-shadow:0 0 0 3px rgba(124,58,237,.08)}
+.fi::placeholder{color:#9CA3AF}
+
+.err{font-size:12px;color:#DC2626;margin-bottom:14px;padding:10px 12px;background:#FEF2F2;border-radius:8px;border-left:3px solid #DC2626;display:none}
+.err.show{display:block}
+
+.btn-primary{width:100%;padding:14px;background:var(--btn);border:none;border-radius:12px;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--fn);transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
+.btn-primary:hover{background:#1F2937;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--mt);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.btn-google{width:100%;padding:12px;background:white;border:1.5px solid var(--border);border-radius:12px;color:var(--tx);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--fn);transition:.2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-google:hover{background:#F9FAFB;border-color:#D1D5DB}
+.google-icon{width:18px;height:18px}
+
+.switch-text{text-align:center;font-size:13px;color:var(--mt);margin-top:20px}
+.switch-link{color:var(--ac);font-weight:600;cursor:pointer;text-decoration:none}
+.switch-link:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="logo">vougeabulary</div>
-  <div class="tagline">Your AI fashion stylist, personalised for you</div>
+  <div class="logo-wrap">
+    <div class="logo-circle"><div class="logo-v">V</div></div>
+  </div>
+  <div class="title">Welcome to Your Wardrobe</div>
+  <div class="subtitle">Access your garments, generate styles, and review saved recommendations.</div>
 
   <div class="tabs">
     <button class="tab on" onclick="switchTab('login',this)">Sign In</button>
@@ -46,69 +76,130 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <!-- Login -->
   <div class="form-section on" id="loginForm">
-    <div class="fg"><label class="fl">Username</label><input class="fi" id="lUser" placeholder="your username" autocomplete="username"></div>
-    <div class="fg"><label class="fl">Password</label><input class="fi" id="lPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <button class="submit-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
-    <div class="divider">or</div>
-    <div style="text-align:center;font-size:12px;color:var(--mt)">New here? <span style="color:var(--ac);cursor:pointer;font-weight:600" onclick="switchTabByName('register')">Create a free account</span></div>
+    <div class="fg">
+      <div class="fl-row"><label class="fl">Email Address</label></div>
+      <div class="input-wrap">
+        <span class="input-icon">✉</span>
+        <input class="fi" id="lUser" placeholder="your@email.com" autocomplete="username">
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fl-row">
+        <label class="fl">Password</label>
+        <span class="forgot">Forgot Password?</span>
+      </div>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input class="fi" id="lPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Lock in Identity &nbsp;→</button>
+    {% if google_client_id %}
+    <div class="divider">or continue with</div>
+    <div id="g_id_onload"
+         data-client_id="{{ google_client_id }}"
+         data-callback="handleGoogleCredential"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-shape="rectangular"
+         data-theme="outline"
+         data-text="continue_with"
+         data-size="large"
+         data-width="352"
+         data-logo_alignment="left">
+    </div>
+    {% endif %}
+    <div class="switch-text">New to Vogueabulary? <span class="switch-link" onclick="switchTabByName('register')">Create account</span></div>
   </div>
 
   <!-- Register -->
   <div class="form-section" id="registerForm">
-    <div class="fg"><label class="fl">Your Name</label><input class="fi" id="rName" placeholder="e.g. Samaira"></div>
-    <div class="fg"><label class="fl">Username</label><input class="fi" id="rUser" placeholder="choose a username (no spaces)"></div>
-    <div class="fg"><label class="fl">Password</label><input class="fi" id="rPass" type="password" placeholder="at least 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
-    <button class="submit-btn" id="registerBtn" onclick="doRegister()">Create Account</button>
+    <div class="fg">
+      <div class="fl-row"><label class="fl">Your Name</label></div>
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input class="fi" id="rName" placeholder="e.g. Samaira">
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fl-row"><label class="fl">Username</label></div>
+      <div class="input-wrap">
+        <span class="input-icon">@</span>
+        <input class="fi" id="rUser" placeholder="choose a username">
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fl-row"><label class="fl">Password</label></div>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input class="fi" id="rPass" type="password" placeholder="at least 6 characters" onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+    </div>
+    <button class="btn-primary" id="registerBtn" onclick="doRegister()">Create Account &nbsp;→</button>
+    {% if google_client_id %}
     <div class="divider">or</div>
-    <div style="text-align:center;font-size:12px;color:var(--mt)">Already have an account? <span style="color:var(--ac);cursor:pointer;font-weight:600" onclick="switchTabByName('login')">Sign in</span></div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-shape="rectangular"
+         data-theme="outline"
+         data-text="signup_with"
+         data-size="large"
+         data-width="352"
+         data-logo_alignment="left">
+    </div>
+    {% endif %}
+    <div class="switch-text" style="margin-top:16px">Already have an account? <span class="switch-link" onclick="switchTabByName('login')">Sign in</span></div>
   </div>
 </div>
 
+{% if google_client_id %}
+<script src="https://accounts.google.com/gsi/client" async></script>
+{% endif %}
 <script>
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-  document.querySelectorAll('.form-section').forEach(f => f.classList.remove('on'));
+async function handleGoogleCredential(response) {
+  const res  = await fetch('/api/auth/google', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({credential: response.credential})});
+  const data = await res.json();
+  if (data.success) { window.location.href = '/'; }
+  else { showErr(data.error || 'Google sign-in failed'); }
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.form-section').forEach(f=>f.classList.remove('on'));
   btn.classList.add('on');
-  document.getElementById(name + 'Form').classList.add('on');
+  document.getElementById(name+'Form').classList.add('on');
   document.getElementById('errMsg').classList.remove('show');
 }
-function switchTabByName(name) {
-  const btn = name === 'login'
-    ? document.querySelectorAll('.tab')[0]
-    : document.querySelectorAll('.tab')[1];
-  switchTab(name, btn);
+function switchTabByName(name){
+  switchTab(name, document.querySelectorAll('.tab')[name==='login'?0:1]);
 }
-function showErr(msg) {
-  const el = document.getElementById('errMsg');
-  el.textContent = msg;
-  el.classList.add('show');
+function showErr(msg){const el=document.getElementById('errMsg');el.textContent=msg;el.classList.add('show');}
+
+async function doLogin(){
+  const btn=document.getElementById('loginBtn');
+  const user=document.getElementById('lUser').value.trim();
+  const pass=document.getElementById('lPass').value;
+  if(!user||!pass){showErr('Please fill in both fields');return;}
+  btn.disabled=true;btn.textContent='Signing in...';
+  const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass})});
+  const data=await res.json();
+  if(data.success){window.location.href='/';}
+  else{showErr(data.error||'Something went wrong');btn.disabled=false;btn.innerHTML='Lock in Identity &nbsp;→';}
 }
 
-async function doLogin() {
-  const btn  = document.getElementById('loginBtn');
-  const user = document.getElementById('lUser').value.trim();
-  const pass = document.getElementById('lPass').value;
-  if (!user || !pass) { showErr('Please fill in both fields'); return; }
-  btn.disabled = true; btn.textContent = 'Signing in...';
-  const res  = await fetch('/api/login', {method:'POST',headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({username: user, password: pass})});
-  const data = await res.json();
-  if (data.success) { window.location.href = '/'; }
-  else { showErr(data.error || 'Something went wrong'); btn.disabled=false; btn.textContent='Sign In'; }
-}
-
-async function doRegister() {
-  const btn  = document.getElementById('registerBtn');
-  const name = document.getElementById('rName').value.trim();
-  const user = document.getElementById('rUser').value.trim().replace(/\s+/g,'');
-  const pass = document.getElementById('rPass').value;
-  if (!name || !user || !pass) { showErr('Please fill in all fields'); return; }
-  btn.disabled = true; btn.textContent = 'Creating account...';
-  const res  = await fetch('/api/register', {method:'POST',headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({display_name: name, username: user, password: pass})});
-  const data = await res.json();
-  if (data.success) { window.location.href = '/'; }
-  else { showErr(data.error || 'Something went wrong'); btn.disabled=false; btn.textContent='Create Account'; }
+async function doRegister(){
+  const btn=document.getElementById('registerBtn');
+  const name=document.getElementById('rName').value.trim();
+  const user=document.getElementById('rUser').value.trim().replace(/\s+/g,'');
+  const pass=document.getElementById('rPass').value;
+  if(!name||!user||!pass){showErr('Please fill in all fields');return;}
+  btn.disabled=true;btn.textContent='Creating account...';
+  const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({display_name:name,username:user,password:pass})});
+  const data=await res.json();
+  if(data.success){window.location.href='/';}
+  else{showErr(data.error||'Something went wrong');btn.disabled=false;btn.innerHTML='Create Account &nbsp;→';}
 }
 </script>
 </body>

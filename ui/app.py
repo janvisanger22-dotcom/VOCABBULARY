@@ -459,7 +459,42 @@ def rule_chat(msg, style, wardrobe, color_season=None, body_type=None):
 def login_page():
     if 'username' in session:
         return redirect('/')
-    return render_template('login.html')
+    google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    return render_template('login.html', google_client_id=google_client_id)
+
+@app.route('/api/auth/google', methods=['POST'])
+def google_auth():
+    import urllib.request, urllib.error
+    data  = request.json
+    token = data.get('credential', '')
+    if not token:
+        return jsonify({'error': 'No credential provided'}), 400
+    try:
+        url = f'https://oauth2.googleapis.com/tokeninfo?id_token={token}'
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            info = json.loads(resp.read())
+        email = info.get('email', '')
+        name  = info.get('name', '') or info.get('given_name', '') or email.split('@')[0]
+        if not email or not info.get('email_verified'):
+            return jsonify({'error': 'Google account not verified'}), 401
+        # Use email-derived username so the same Google account always maps to same user
+        username = re.sub(r'[^a-z0-9_]', '_', email.lower())
+        users = load_users()
+        if username not in users:
+            users[username] = {
+                'password':     generate_password_hash(f'google_oauth_{email}'),
+                'display_name': name,
+                'email':        email,
+                'provider':     'google',
+            }
+            save_users(users)
+        session['username']     = username
+        session['display_name'] = users[username].get('display_name', name)
+        return jsonify({'success': True})
+    except urllib.error.URLError:
+        return jsonify({'error': 'Could not verify with Google — check your internet'}), 503
+    except Exception as e:
+        return jsonify({'error': f'Google sign-in failed: {str(e)}'}), 401
 
 @app.route('/api/login', methods=['POST'])
 def do_login():
