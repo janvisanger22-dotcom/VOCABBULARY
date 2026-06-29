@@ -2,5 +2,9 @@
   "testuser": {
     "password": "scrypt:32768:8:1$ks3dgfBLBdfRKNev$6ce05607bbfb7263f3721e05b5bfd3cfd131397bb0860c7d2875c59ca557e1c5af184b795815ed4ab8b819b637cc90438f7cc5f2aaca7b677dfcc0811a2f6199",
     "display_name": "Test"
+  },
+  "rana": {
+    "password": "scrypt:32768:8:1$Ow2o5HRrGpHsCn6A$1dba248966ecff9e50ca27216037c241b513c0fd61997a11871a5e89a88ff42746beed5d46697633a6f460e1e6a70fe45a62a2b60a452d3474a071d51b7ca78b",
+    "display_name": "Samaira"
   }
 }
