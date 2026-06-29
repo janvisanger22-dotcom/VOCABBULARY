@@ -480,7 +480,6 @@ def google_auth():
         name  = info.get('name', '') or info.get('given_name', '') or email.split('@')[0]
         if not email or not info.get('email_verified'):
             return jsonify({'error': 'Google account not verified'}), 401
-        # Use email-derived username so the same Google account always maps to same user
         username = re.sub(r'[^a-z0-9_]', '_', email.lower())
         users = load_users()
         if username not in users:
@@ -498,6 +497,73 @@ def google_auth():
         return jsonify({'error': 'Could not verify with Google — check your internet'}), 503
     except Exception as e:
         return jsonify({'error': f'Google sign-in failed: {str(e)}'}), 401
+
+# ── Google OAuth redirect flow (works on Safari / iPhone) ─────────────────────
+@app.route('/auth/google/redirect')
+def google_redirect():
+    import urllib.parse
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '') or _LOCAL_GOOGLE_CLIENT_ID
+    if not client_id:
+        return redirect('/login')
+    base_url  = request.host_url.rstrip('/')
+    callback  = f'{base_url}/auth/google/callback'
+    params    = urllib.parse.urlencode({
+        'client_id':     client_id,
+        'redirect_uri':  callback,
+        'response_type': 'code',
+        'scope':         'openid email profile',
+        'access_type':   'online',
+        'prompt':        'select_account',
+    })
+    return redirect(f'https://accounts.google.com/o/oauth2/v2/auth?{params}')
+
+@app.route('/auth/google/callback')
+def google_callback():
+    import urllib.request, urllib.parse, urllib.error
+    code      = request.args.get('code', '')
+    error     = request.args.get('error', '')
+    if error or not code:
+        return redirect('/login')
+    client_id     = os.environ.get('GOOGLE_CLIENT_ID', '') or _LOCAL_GOOGLE_CLIENT_ID
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+    base_url      = request.host_url.rstrip('/')
+    callback_uri  = f'{base_url}/auth/google/callback'
+    try:
+        # Exchange code for tokens
+        token_data = urllib.parse.urlencode({
+            'code':          code,
+            'client_id':     client_id,
+            'client_secret': client_secret,
+            'redirect_uri':  callback_uri,
+            'grant_type':    'authorization_code',
+        }).encode()
+        req  = urllib.request.Request('https://oauth2.googleapis.com/token', data=token_data)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            tokens = json.loads(resp.read())
+        id_token = tokens.get('id_token', '')
+        # Verify the id_token
+        url = f'https://oauth2.googleapis.com/tokeninfo?id_token={id_token}'
+        with urllib.request.urlopen(url, timeout=8) as resp:
+            info = json.loads(resp.read())
+        email = info.get('email', '')
+        name  = info.get('name', '') or info.get('given_name', '') or email.split('@')[0]
+        if not email or not info.get('email_verified'):
+            return redirect('/login')
+        username = re.sub(r'[^a-z0-9_]', '_', email.lower())
+        users = load_users()
+        if username not in users:
+            users[username] = {
+                'password':     generate_password_hash(f'google_oauth_{email}'),
+                'display_name': name,
+                'email':        email,
+                'provider':     'google',
+            }
+            save_users(users)
+        session['username']     = username
+        session['display_name'] = users[username].get('display_name', name)
+        return redirect('/')
+    except Exception:
+        return redirect('/login')
 
 @app.route('/api/login', methods=['POST'])
 def do_login():

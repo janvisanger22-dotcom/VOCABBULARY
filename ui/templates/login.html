@@ -154,10 +154,11 @@ function initGSI() {
 
 function triggerGoogle() {
   if (!GOOGLE_CLIENT_ID) {
-    showErr('Google sign-in is not configured yet. Please use email and password to sign in, or ask the site admin to add the Google Client ID.');
+    showErr('Google sign-in is not configured yet. Please use email and password to sign in.');
     return;
   }
-  google.accounts.id.prompt();
+  // Redirect-based flow — works on iPhone/Safari and all browsers
+  window.location.href = '/auth/google/redirect';
 }
 
 async function handleGoogleCredential(response) {
