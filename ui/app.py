@@ -23,6 +23,9 @@ except ImportError:
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'vouge-luxury-secret-2024')
 
+# Set your Google Client ID here for local development, or use the env var on Render
+_LOCAL_GOOGLE_CLIENT_ID = ''  # paste your Client ID between the quotes
+
 DATA_DIR         = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
 WARDROBE_FILE    = os.path.join(DATA_DIR, 'wardrobe.json')   # default items for new users
 WARDROBES_FILE   = os.path.join(DATA_DIR, 'wardrobes.json')  # per-user wardrobes
@@ -459,7 +462,7 @@ def rule_chat(msg, style, wardrobe, color_season=None, body_type=None):
 def login_page():
     if 'username' in session:
         return redirect('/')
-    google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '') or _LOCAL_GOOGLE_CLIENT_ID
     return render_template('login.html', google_client_id=google_client_id)
 
 @app.route('/api/auth/google', methods=['POST'])

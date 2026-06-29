@@ -299,7 +299,74 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid var(--border);background:var(--ac-light);color:var(--ac)}
 
 @media(max-width:1000px){.style-grid{grid-template-columns:repeat(2,1fr)}.wlayout{grid-template-columns:1fr}.shop-grid{grid-template-columns:1fr}.profile-layout{grid-template-columns:1fr}.bt-grid{grid-template-columns:repeat(3,1fr)}.ob-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){.main{padding:16px}.nav{padding:0 16px}.caps-stats{grid-template-columns:repeat(2,1fr)}.nt span{display:none}}
+
+/* ── MOBILE ─────────────────────────────────────────────────────────────────── */
+/* Bottom nav bar */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:6px 0 env(safe-area-inset-bottom,6px)}
+.mob-nav-inner{display:flex;justify-content:space-around;align-items:center}
+.mn-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;background:none;border:none;cursor:pointer;font-family:var(--fn);border-radius:12px;transition:.15s;min-width:48px}
+.mn-btn.on{background:var(--ac-light)}
+.mn-icon{font-size:20px;line-height:1}
+.mn-lbl{font-size:9px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.4px}
+.mn-btn.on .mn-lbl{color:var(--ac)}
+
+@media(max-width:640px){
+  /* Hide desktop nav tabs, show mobile bottom nav */
+  .nav-tabs{display:none}
+  .mob-nav{display:block}
+  .user-chip .user-info{display:none}
+  .profile-badges{display:none}
+  .nav{padding:0 14px;height:56px}
+  .nav-brand-sub{display:none}
+  .workspace-bar{margin-top:56px;padding:8px 14px;font-size:11px}
+  .main{padding:12px 14px;padding-bottom:80px}
+
+  /* Fix chat height for mobile */
+  .chat-wrap{height:calc(100vh - 200px)}
+
+  /* Caps stats 2 cols on mobile */
+  .caps-stats{grid-template-columns:repeat(2,1fr)}
+
+  /* Style grid 2 cols */
+  .style-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* Outfit builder grid single col */
+  .ob-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* Body type grid 2 cols */
+  .bt-grid{grid-template-columns:repeat(3,1fr)}
+
+  /* Season grid 1 col */
+  .season-grid{grid-template-columns:1fr 1fr}
+
+  /* Outfit cards stack */
+  .outfits-wrap{flex-direction:column}
+  .oc{min-width:unset}
+
+  /* Controls stack */
+  .ctrl-card{flex-direction:column;align-items:flex-start;gap:16px}
+
+  /* Page header stack */
+  .page-hdr{flex-direction:column;gap:10px}
+
+  /* Shop grid single col */
+  .shop-grid{grid-template-columns:1fr}
+
+  /* Verdict sections stack */
+  .verdict-sections{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
+  .quiz-opts{grid-template-columns:1fr}
+
+  /* Wardrobe grid bigger cards */
+  .wgrid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+
+  /* Search bar stack */
+  .search-bar{gap:8px}
+  .search-input-wrap{min-width:unset}
+
+  /* Page title smaller */
+  .page-title{font-size:22px}
+}
 </style>
 </head>
 <body>
@@ -589,8 +656,13 @@ const WS_LABELS = {recs:'AI Recommendations ✨',wardrobe:'My Wardrobe ✨',save
 function tab(id, btn) {
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.nt').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.mn-btn').forEach(b=>b.classList.remove('on'));
   document.getElementById('t-'+id).classList.add('on');
-  btn.classList.add('on');
+  if(btn) btn.classList.add('on');
+  // sync desktop tab
+  document.querySelectorAll('.nt').forEach(b=>{if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('on');});
+  // sync mobile tab
+  document.querySelectorAll('.mn-btn').forEach(b=>{if(b.dataset.tab===id)b.classList.add('on');});
   document.getElementById('wsLabel').textContent = WS_LABELS[id]||'';
   if(id==='wardrobe') loadWardrobe();
   if(id==='shop') loadShop(curStyle);
@@ -899,6 +971,33 @@ function selectBody(key){
 // ── Init ──────────────────────────────────────────────────────────────────────
 initChat();
 loadSavedOutfits();
+
+// ── Mobile bottom nav ────────────────────────────────────────────────────────
+function mobTab(name, btn) { tab(name, btn); }
 </script>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mob-nav">
+  <div class="mob-nav-inner">
+    <button class="mn-btn on" data-tab="recs" onclick="mobTab('recs',this)">
+      <span class="mn-icon">✦</span><span class="mn-lbl">Outfits</span>
+    </button>
+    <button class="mn-btn" data-tab="wardrobe" onclick="mobTab('wardrobe',this)">
+      <span class="mn-icon">👗</span><span class="mn-lbl">Wardrobe</span>
+    </button>
+    <button class="mn-btn" data-tab="saved" onclick="mobTab('saved',this)">
+      <span class="mn-icon">🔖</span><span class="mn-lbl">Saved</span>
+    </button>
+    <button class="mn-btn" data-tab="chat" onclick="mobTab('chat',this)">
+      <span class="mn-icon">💬</span><span class="mn-lbl">Chat</span>
+    </button>
+    <button class="mn-btn" data-tab="shop" onclick="mobTab('shop',this)">
+      <span class="mn-icon">🛍</span><span class="mn-lbl">Shop</span>
+    </button>
+    <button class="mn-btn" data-tab="profile" onclick="mobTab('profile',this)">
+      <span class="mn-icon">⚙</span><span class="mn-lbl">Settings</span>
+    </button>
+  </div>
+</nav>
 </body>
 </html>
