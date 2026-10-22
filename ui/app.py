@@ -1,4 +1,4 @@
-import sys, os, json, random, base64, re
+import sys, os, json, random, base64, re, secrets
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -22,6 +22,7 @@ except ImportError:
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'vouge-luxury-secret-2024')
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8 MB request limit (photo uploads)
 
 # Set your Google Client ID here for local development, or use the env var on Render
 _LOCAL_GOOGLE_CLIENT_ID = ''  # paste your Client ID between the quotes
@@ -31,6 +32,8 @@ WARDROBE_FILE    = os.path.join(DATA_DIR, 'wardrobe.json')   # default items for
 WARDROBES_FILE   = os.path.join(DATA_DIR, 'wardrobes.json')  # per-user wardrobes
 SAVED_FITS_FILE  = os.path.join(DATA_DIR, 'saved_fits_db.json')
 USERS_FILE       = os.path.join(DATA_DIR, 'users.json')
+
+ALLOWED_IMAGE_EXTS = {'jpg', 'jpeg', 'png', 'webp', 'gif'}
 
 def login_required(f):
     @wraps(f)
@@ -465,6 +468,35 @@ def login_page():
     google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '') or _LOCAL_GOOGLE_CLIENT_ID
     return render_template('login.html', google_client_id=google_client_id)
 
+def _google_sign_in(info):
+    """Log in from verified tokeninfo. Returns False if the token or account is not acceptable."""
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '') or _LOCAL_GOOGLE_CLIENT_ID
+    # Token must have been issued to this app, not some other site
+    if not client_id or info.get('aud') != client_id:
+        return False
+    email = (info.get('email') or '').strip()
+    if not email or str(info.get('email_verified')).lower() != 'true':
+        return False
+    name     = info.get('name', '') or info.get('given_name', '') or email.split('@')[0]
+    username = re.sub(r'[^a-z0-9_]', '_', email.lower())
+    users = load_users()
+    if username in users:
+        existing = users[username]
+        # Never log into a password account or a different Google user that maps to the same name
+        if existing.get('provider') != 'google' or (existing.get('email') or '').lower() != email.lower():
+            return False
+    else:
+        users[username] = {
+            'password':     generate_password_hash(secrets.token_urlsafe(32)),
+            'display_name': name,
+            'email':        email,
+            'provider':     'google',
+        }
+        save_users(users)
+    session['username']     = username
+    session['display_name'] = users[username].get('display_name', name)
+    return True
+
 @app.route('/api/auth/google', methods=['POST'])
 def google_auth():
     import urllib.request, urllib.error
@@ -476,22 +508,8 @@ def google_auth():
         url = f'https://oauth2.googleapis.com/tokeninfo?id_token={token}'
         with urllib.request.urlopen(url, timeout=5) as resp:
             info = json.loads(resp.read())
-        email = info.get('email', '')
-        name  = info.get('name', '') or info.get('given_name', '') or email.split('@')[0]
-        if not email or not info.get('email_verified'):
-            return jsonify({'error': 'Google account not verified'}), 401
-        username = re.sub(r'[^a-z0-9_]', '_', email.lower())
-        users = load_users()
-        if username not in users:
-            users[username] = {
-                'password':     generate_password_hash(f'google_oauth_{email}'),
-                'display_name': name,
-                'email':        email,
-                'provider':     'google',
-            }
-            save_users(users)
-        session['username']     = username
-        session['display_name'] = users[username].get('display_name', name)
+        if not _google_sign_in(info):
+            return jsonify({'error': 'Google sign-in was refused for this account'}), 401
         return jsonify({'success': True})
     except urllib.error.URLError:
         return jsonify({'error': 'Could not verify with Google — check your internet'}), 503
@@ -545,22 +563,8 @@ def google_callback():
         url = f'https://oauth2.googleapis.com/tokeninfo?id_token={id_token}'
         with urllib.request.urlopen(url, timeout=8) as resp:
             info = json.loads(resp.read())
-        email = info.get('email', '')
-        name  = info.get('name', '') or info.get('given_name', '') or email.split('@')[0]
-        if not email or not info.get('email_verified'):
+        if not _google_sign_in(info):
             return redirect('/login')
-        username = re.sub(r'[^a-z0-9_]', '_', email.lower())
-        users = load_users()
-        if username not in users:
-            users[username] = {
-                'password':     generate_password_hash(f'google_oauth_{email}'),
-                'display_name': name,
-                'email':        email,
-                'provider':     'google',
-            }
-            save_users(users)
-        session['username']     = username
-        session['display_name'] = users[username].get('display_name', name)
         return redirect('/')
     except Exception:
         return redirect('/login')
@@ -575,6 +579,9 @@ def do_login():
     users = load_users()
     if username not in users:
         return jsonify({'error': 'No account found — sign up first'}), 401
+    # Google accounts sign in via Google only (older ones have a guessable password hash)
+    if users[username].get('provider') == 'google':
+        return jsonify({'error': 'This account uses Google sign-in'}), 401
     if not check_password_hash(users[username]['password'], password):
         return jsonify({'error': 'Wrong password'}), 401
     session['username']     = username
@@ -759,27 +766,37 @@ def upload_image():
     """Accept a base64 image and save it to static/uploads/. Returns the URL path."""
     data     = request.json
     img_data = data.get('image', '')          # data:image/...;base64,...
-    item_id  = data.get('item_id', 'unknown')
+    item_id  = str(data.get('item_id', ''))
     if not img_data:
         return jsonify({'error': 'No image provided'}), 400
+    # item_id becomes part of the file name, so only allow safe characters
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', item_id):
+        return jsonify({'error': 'Invalid item id'}), 400
     # Strip the data URI prefix
     if ',' in img_data:
         header, encoded = img_data.split(',', 1)
-        ext = header.split('/')[1].split(';')[0]   # e.g. "jpeg"
+        ext = header.split('/')[1].split(';')[0].lower() if '/' in header else ''
     else:
         encoded, ext = img_data, 'jpg'
+    if ext not in ALLOWED_IMAGE_EXTS:
+        return jsonify({'error': 'Unsupported image type'}), 400
+    # Only accept uploads for items in the current user's wardrobe
+    items = load_wardrobe()
+    item = next((i for i in items if i['id'] == item_id), None)
+    if item is None:
+        return jsonify({'error': 'Item not found'}), 404
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except Exception:
+        return jsonify({'error': 'Invalid image data'}), 400
     uploads_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
     os.makedirs(uploads_dir, exist_ok=True)
-    filename = f"{item_id}.{ext}"
-    filepath = os.path.join(uploads_dir, filename)
-    with open(filepath, 'wb') as f:
-        f.write(base64.b64decode(encoded))
+    owner = re.sub(r'[^a-z0-9_]', '_', session.get('username', 'guest').lower())[:64]
+    filename = f"{owner}.{item_id}.{ext}"
+    with open(os.path.join(uploads_dir, filename), 'wb') as f:
+        f.write(raw)
     # Save image path on the wardrobe item
-    items = load_wardrobe()
-    for i in items:
-        if i['id'] == item_id:
-            i['image'] = f"/static/uploads/{filename}"
-            break
+    item['image'] = f"/static/uploads/{filename}"
     save_wardrobe(items)
     return jsonify({'success': True, 'url': f"/static/uploads/{filename}"})
 
